@@ -20,23 +20,30 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include<Eigen/Dense>
-
+#include "SpeedPPR.h"
 #include "Graph.h"
 
 using namespace std;
 using namespace Eigen;
 typedef unsigned int uint;
-
 namespace propagation{
     class Instantgnn{
-        Eigen::MatrixXd X;
+        
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         int NUMTHREAD=40;//Number of threads
         uint edges, vert;
         Graph g;
+        Eigen::MatrixXd X;
+        SpeedPPR ppr;
         vector<vector<double>> R;
-    	  double rmax,alpha,t;
+        vector<vector<double>> R_b;
+        vector<vector<double>> pi_b;
+        vector<vector<double>> inaccaracy_pos;
+        vector<vector<double>> inaccaracy_neg;
+    	float rmax,alpha,t,epsilon,lower_threshold,omega;
+        int rw_count=0;
+        unsigned long long num_total_rw;
         string dataset_name;
         string updateFile;
         vector<double>rowsum_pos;
@@ -44,15 +51,14 @@ namespace propagation{
         vector<int>random_w;
         vector<int>update_w;
         vector<double>Du;
+        Config config;
         int dimension;
-        double initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double alphaa,Eigen::Map<Eigen::MatrixXd> &feat);
-        void ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, bool log);
-        void ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates);
-        void snapshot_operation(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat);
-        void overall_operation(double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat);
+        double initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double alphaa,double epsilonn,Eigen::Map<Eigen::MatrixXd> &feat, string algorithm);
+        void ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, bool log, string algorithm, bool reverse);
+        void ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, string algorithm, bool reverse);
+        void snapshot_operation(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, string algorithm);
+        void snapshot_lazy(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &feat_p, Eigen::Map<Eigen::MatrixXd> &change_node_list, string algorithm);
         vector<vector<uint>> update_graph(string updatefilename, vector<uint>&affected_nodelst, vector<vector<uint>>&delete_neighbors);
-        int snapshot_operation_rate_Z(string updatefilename, int begin, double rmaxx,double alphaa, double threshold, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &init_Z);
-        void linenum_operation(string updatefilename, int begin, int end, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat);
     };
 }
 

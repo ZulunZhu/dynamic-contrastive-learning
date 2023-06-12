@@ -1,6 +1,8 @@
 #include "instantAlg.h"
 #include "Graph.h"
-
+#include "BatchRandomWalk.h"
+#include "SpeedPPR.h"
+#include "HelperFunctions.h"
 using namespace std;
 using namespace Eigen;
 
@@ -41,7 +43,7 @@ vector<vector<uint>> Instantgnn::update_graph(string updatefilename, vector<uint
 }
 
 //batch_update
-void Instantgnn::snapshot_operation(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat)
+void Instantgnn::snapshot_operation(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, string algorithm)
 {
     alpha=alphaa;
     rmax=rmaxx;
@@ -134,11 +136,11 @@ void Instantgnn::snapshot_operation(string updatefilename, double rmaxx,double a
     if(update_w.size()>0)
     {
       cout<<"dims of feats that need push:"<<update_w.size()<<endl;
-      Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,true);
+      Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,true,algorithm);
     }
 }
 
-void Instantgnn::linenum_operation(string updatefilename, int begin, int end, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat)
+void Instantgnn::linenum_operation(string updatefilename, int begin, int end, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, string algorithm)
 {
     alpha=alphaa;
     rmax=rmaxx;
@@ -236,12 +238,12 @@ void Instantgnn::linenum_operation(string updatefilename, int begin, int end, do
         }
         //push every edge
         if(update_w.size()>0)
-            Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,false);
+            Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,false,algorithm);
     }
     infile.close();
 }
 
-int Instantgnn::snapshot_operation_rate_Z(string updatefilename, int begin, double rmaxx,double alphaa, double threshold, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &init_Z)
+int Instantgnn::snapshot_operation_rate_Z(string updatefilename, int begin, double rmaxx,double alphaa, double threshold, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &init_Z, string algorithm)
 {
     alpha=alphaa;
     rmax=rmaxx;
@@ -350,7 +352,7 @@ int Instantgnn::snapshot_operation_rate_Z(string updatefilename, int begin, doub
         //cout<<"k = "<<k <<", update_w.size:"<<update_w.size()<<endl;
         if(update_w.size()>0)
         {
-          Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,false);
+          Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,false,algorithm);
           diff = feat - feat_last_time;
           delta_feat = feat - init_Z;
           double diff_F = diff.norm();
@@ -372,7 +374,7 @@ int Instantgnn::snapshot_operation_rate_Z(string updatefilename, int begin, doub
     return line_num;
 }
 
-void Instantgnn::overall_operation(double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat){
+void Instantgnn::overall_operation(double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, string algorithm){
     alpha=alphaa;
     rmax=rmaxx;
     
@@ -403,14 +405,14 @@ void Instantgnn::overall_operation(double rmaxx,double alphaa, Eigen::Map<Eigen:
     }
     if(update_w.size()>0)
     {
-        Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,true);
+        Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,true,algorithm);
     }
 }
 
 int startsWith(string s, string sub){
         return s.find(sub)==0?1:0;
 }
-double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double alphaa,Eigen::Map<Eigen::MatrixXd> &feat)
+double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double alphaa,double epsilonn,Eigen::Map<Eigen::MatrixXd> &feat, string algorithm)
 {
     X = feat; // change in feat not influence X
     /*if(startsWith(dataset, "arxiv")){
@@ -427,8 +429,9 @@ double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn
     g.inputGraph(path, dataset_name, vert, edges);
     cout<<"g.getOutSize:"<<g.getOutSize(0)<<endl;
 
-    dimension=feat.rows();
-    cout<<"dimension: "<<dimension<<", col:"<<feat.cols()<<endl;
+    dimension=min(feat.rows(),feat.cols());
+    cout<<"dimension: "<<dimension<<", col:"<<max(feat.rows(),feat.cols())<<endl;
+    cout<<" 1..."<<endl;
     Du=vector<double>(vert,0);
     double rrr=0.5;
     for(uint i=0; i<vert; i++)
@@ -437,13 +440,16 @@ double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn
     }
 
     R = vector<vector<double>>(dimension, vector<double>(vert, 0));
+    cout<<" 3..."<<endl;
     rowsum_pos = vector<double>(dimension,0);
+    cout<<" 3..."<<endl;
     rowsum_neg = vector<double>(dimension,0);
-    
+    cout<<" 3..."<<endl;
     random_w = vector<int>(dimension);
     
     for(int i = 0 ; i < dimension ; i++ )
         random_w[i] = i;
+    
     random_shuffle(random_w.begin(),random_w.end());
     for(int i=0; i<dimension; i++)
     {
@@ -455,17 +461,17 @@ double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn
                 rowsum_neg[i]+=feat(i,j);
         }
     }
-    
+    cout<<" 4..."<<endl;
     vector<queue<uint>> candidate_sets(dimension);
     vector<vector<bool>> isCandidates(dimension, vector<bool>(vert, false));
-
-    Instantgnn::ppr_push(dimension, feat, true,candidate_sets,isCandidates,true);
+    cout<<" Start Push..."<<endl;
+    Instantgnn::ppr_push(dimension, feat, true,candidate_sets,isCandidates,true,algorithm);
 
     double dataset_size=(double)(((long long)edges+vert)*4+(long long)vert*dimension*8)/1024.0/1024.0/1024.0;
     return dataset_size;
 }
 
-void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, bool log)
+void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, bool log, string algorithm)
 {
     vector<thread> threads;
     
@@ -484,18 +490,18 @@ void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool i
         start = ends;
         ends+=ceil((double)dimension/NUMTHREAD);
         if(init)
-            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,true,std::ref(candidate_sets),std::ref(isCandidates)));
+            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,true,std::ref(candidate_sets),std::ref(isCandidates),algorithm));
         else
-            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,false,std::ref(candidate_sets),std::ref(isCandidates)));
+            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,false,std::ref(candidate_sets),std::ref(isCandidates),algorithm));
     }
     for( ; ti<=NUMTHREAD ; ti++ )
     {
         start = ends;
         ends+=dimension/NUMTHREAD;
         if(init)
-            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,true,std::ref(candidate_sets),std::ref(isCandidates)));
+            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,true,std::ref(candidate_sets),std::ref(isCandidates),algorithm));
         else
-            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,false,std::ref(candidate_sets),std::ref(isCandidates)));
+            threads.push_back(thread(&Instantgnn::ppr_residue,this,feat,start,ends,false,std::ref(candidate_sets),std::ref(isCandidates),algorithm));
     }
     
     for (int t = 0; t < NUMTHREAD ; t++)
@@ -515,7 +521,7 @@ void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool i
     vector<queue<uint>>().swap(candidate_sets);
 }
 
-void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates)
+void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, string algorithm)
 {
     int w;
     for(int it=st;it<ed;it++)

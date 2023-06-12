@@ -5,14 +5,14 @@ import random
 import scipy.sparse as sp
 import torch
 import torch.nn.functional as F
-from torch_sparse import SparseTensor
+# from torch_sparse import SparseTensor
 from torch_geometric.utils import to_undirected
 from ogb.nodeproppred import PygNodePropPredDataset
 import sklearn.preprocessing
 import tracemalloc
 import gc
 import struct
-from torch_sparse import coalesce
+# from torch_sparse import coalesce
 import math
 import pdb
 import time
@@ -20,7 +20,8 @@ import time
 np.random.seed(0)
 random.seed(0)
 torch.manual_seed(0)
-    
+print('start processing data: ')   
+self_loop = True
 def dropout_adj(edge_index, rmnode_idx, edge_attr=None, force_undirected=True,
                 num_nodes=None):
 
@@ -49,9 +50,9 @@ def dropout_adj(edge_index, rmnode_idx, edge_attr=None, force_undirected=True,
         edge_index = torch.stack(
             [torch.cat([new_row, new_col], dim=0),
              torch.cat([new_col, new_row], dim=0)], dim=0)
-        if edge_attr is not None:
-            edge_attr = torch.cat([edge_attr, edge_attr], dim=0)
-        edge_index, edge_attr = coalesce(edge_index, edge_attr, N, N)
+        # if edge_attr is not None:
+        #     edge_attr = torch.cat([edge_attr, edge_attr], dim=0)
+        # edge_index, edge_attr = coalesce(edge_index, edge_attr, N, N)
     else:
         edge_index = torch.stack([new_row, new_col], dim=0)
     drop_edge_index = torch.stack([drop_row, drop_col], dim=0)  ### only u->v (no v->u)
@@ -62,18 +63,19 @@ def filter_adj(row, col, edge_attr, mask):
     return row[mask], col[mask], None if edge_attr is None else edge_attr[mask]
 
 def arxiv():
+    print('start processing data: ')
     dataset=PygNodePropPredDataset(name='ogbn-arxiv')
     data = dataset[0]
     split_idx = dataset.get_idx_split()
     train_idx, val_idx, test_idx = split_idx['train'], split_idx['valid'], split_idx['test']
     all_idx = torch.cat([train_idx, val_idx, test_idx])
-
+    print("train_idx:",train_idx)
     feat=data.x.numpy()
     feat=np.array(feat,dtype=np.float64)
     scaler = sklearn.preprocessing.StandardScaler()
     scaler.fit(feat)
     feat = scaler.transform(feat)
-    np.save('./data/arxiv/arxiv_feat.npy',feat)
+    np.save('../data/arxiv/arxiv_feat.npy',feat)
     
     #get labels
     labels=data.y
@@ -98,15 +100,35 @@ def arxiv():
     train_labels=train_labels.reshape(train_labels.shape[1])
     val_labels=val_labels.reshape(val_labels.shape[1])
     test_labels=test_labels.reshape(test_labels.shape[1])
-    np.savez('./data/arxiv/arxiv_labels.npz',train_idx=train_idx,val_idx=val_idx,test_idx=test_idx,train_labels=train_labels,val_labels=val_labels,test_labels=test_labels)
-
+    np.savez('../data/arxiv/arxiv_labels.npz',train_idx=train_idx,val_idx=val_idx,test_idx=test_idx,train_labels=train_labels,val_labels=val_labels,test_labels=test_labels)
+    # np.savez('../data/arxiv/arxiv_labels_scara.npz',labels = labels, idx_train=train_idx,idx_val=val_idx,idx_test=test_idx)
+    print("Edge number before to_undirected:", data.edge_index.size())
     data.edge_index = to_undirected(data.edge_index, data.num_nodes)
+    print("Edge number after to_undirected:", data.edge_index.size())
+    row_ful,col_ful=data.edge_index
+    row_ful=row_ful.numpy()
+    col_ful=col_ful.numpy()
+    edge_number = 0
+    with open('../data/arxiv/arxiv_full_adj' + '.txt', 'w') as f:
+        # if(self_loop):
+        for i, j in zip(row_ful, col_ful):
+            f.write("%d %d\n" % (i, j))
+            f.write("%d %d\n" % (j, i))
+            edge_number+=1
+        # else:
+        #     for i, j in zip(row_ful, col_ful):
+        #         if(i != j):
+        #             f.write("%d %d\n" % (i, j))
+        #             f.write("%d %d\n" % (j, i))
+        #             edge_number+=1
+    print("full edge_number", edge_number)
+
     data.edge_index, drop_edge_index, _ = dropout_adj(data.edge_index,train_idx, num_nodes= data.num_nodes)
     data.edge_index = to_undirected(data.edge_index, data.num_nodes)
     
     row_drop, col_drop = np.array(drop_edge_index)
 
-    f = open('./data/arxiv/ogbn-arxiv_update_full.txt', 'w+')
+    f = open('../data/arxiv/ogbn-arxiv_update_full.txt', 'w+')
     for k in range(row_drop.shape[0]):
         v_from = row_drop[k]
         v_to = col_drop[k]
@@ -118,7 +140,22 @@ def arxiv():
     print(row_drop.shape)
     row=row.numpy()
     col=col.numpy()
-    
+    edge_number = 0
+    with open('../data/arxiv/arxiv_init_adj' + '.txt', 'w') as f:
+        if(self_loop):
+            for i, j in zip(row, col):
+                f.write("%d %d\n" % (i, j))
+                f.write("%d %d\n" % (j, i))
+                edge_number+=1
+        else:
+            for i, j in zip(row, col):
+                if(i != j):
+                    f.write("%d %d\n" % (i, j))
+                    f.write("%d %d\n" % (j, i))
+                    edge_number+=1
+    print("edge_number", edge_number)            
+                
+    torch.save([row, col], '../data/arxiv_python/arxiv_init_adj.pt')
     save_adj(row, col, N=data.num_nodes, dataset_name='arxiv', savename='arxiv_init', snap='init')
     num_snap = 16
     snapshot = math.floor(row_drop.shape[0] / num_snap)
@@ -139,10 +176,18 @@ def arxiv():
         if (sn+1) % 20 ==0 or (sn+1)==num_snap:
             save_adj(row_tmp, col_tmp, N=data.num_nodes, dataset_name='arxiv', savename='arxiv_snap'+str(sn+1), snap=(sn+1)) 
         
-        with open('./data/arxiv/arxiv_Edgeupdate_snap' + str(sn+1) + '.txt', 'w') as f:
-            for i, j in zip(row_sn, col_sn):
-                f.write("%d %d\n" % (i, j))
-                f.write("%d %d\n" % (j, i))
+        torch.save([row_sn, col_sn], '../data/arxiv_python/arxiv_Edgeupdate_snap' + str(sn+1) + '.pt')
+
+        with open('../data/arxiv/arxiv_Edgeupdate_snap' + str(sn+1) + '.txt', 'w') as f:
+            if(self_loop):
+                for i, j in zip(row_sn, col_sn):
+                    f.write("%d %d\n" % (i, j))
+                    f.write("%d %d\n" % (j, i))
+            else:
+                for i, j in zip(row_sn, col_sn):
+                    if (i != j):
+                        f.write("%d %d\n" % (i, j))
+                        f.write("%d %d\n" % (j, i))
     print('Arxiv -- save snapshots finish')
 
 def products():
@@ -158,7 +203,7 @@ def products():
     scaler = sklearn.preprocessing.StandardScaler()
     scaler.fit(feat)
     feat = scaler.transform(feat)
-    np.save('./data/products/products_feat.npy',feat)
+    np.save('../data/products/products_feat.npy',feat)
 
     #get labels
     print("save labels.....")
@@ -186,7 +231,7 @@ def products():
     train_labels=train_labels.reshape(train_labels.shape[1])
     val_labels=val_labels.reshape(val_labels.shape[1])
     test_labels=test_labels.reshape(test_labels.shape[1])
-    np.savez('./data/products/products_labels.npz',train_idx=train_idx,val_idx=val_idx,test_idx=test_idx,train_labels=train_labels,val_labels=val_labels,test_labels=test_labels)
+    np.savez('../data/products/products_labels.npz',train_idx=train_idx,val_idx=val_idx,test_idx=test_idx,train_labels=train_labels,val_labels=val_labels,test_labels=test_labels)
     
     data.edge_index = to_undirected(data.edge_index, data.num_nodes)
     data.edge_index, drop_edge_index, _ = dropout_adj(data.edge_index,train_idx, num_nodes= data.num_nodes)
@@ -195,7 +240,7 @@ def products():
     
     row_drop, col_drop = np.array(drop_edge_index)
     print('row_drop.shape:', row_drop.shape)
-    f = open('./data/products/ogbn-products_update_full.txt', 'w+')
+    f = open('../data/products/ogbn-products_update_full.txt', 'w+')
     for k in range(row_drop.shape[0]):
         v_from = row_drop[k]
         v_to = col_drop[k]
@@ -226,7 +271,7 @@ def products():
         
         save_adj(row_tmp, col_tmp, N=data.num_nodes, dataset_name='products', savename='products_snap'+str(sn+1), snap=(sn+1))
         
-        with open('./data/products/products_Edgeupdate_snap' + str(sn+1) + '.txt', 'w') as f:
+        with open('../data/products/products_Edgeupdate_snap' + str(sn+1) + '.txt', 'w') as f:
             for i, j in zip(row_sn, col_sn):
                 f.write("%d %d\n" % (i, j))
                 f.write("%d %d\n" % (j, i))
@@ -239,7 +284,7 @@ def papers100M():
     data = dataset[0]
 
     feat=data.x.numpy()
-    feat=np.array(feat,dtype=np.float64)
+    feat=np.array(feat,dtype=np.float32)
 
     #normalize feats
     scaler = sklearn.preprocessing.StandardScaler()
@@ -247,10 +292,10 @@ def papers100M():
     feat = scaler.transform(feat)
 
     #save feats
-    np.save('./data/papers100M/papers100M_feat.npy',feat)
+    np.save('../data/papers100M/papers100M_feat.npy',feat)
     del feat
     gc.collect()
-
+    print("feature saved")
     #get labels
     train_idx, val_idx, test_idx = split_idx['train'], split_idx['valid'], split_idx['test']
     all_idx = torch.cat([train_idx, val_idx, test_idx])
@@ -277,7 +322,7 @@ def papers100M():
     train_labels=train_labels.reshape(train_labels.shape[1])
     val_labels=val_labels.reshape(val_labels.shape[1])
     test_labels=test_labels.reshape(test_labels.shape[1])
-    np.savez('./data/papers100M/papers100M_labels.npz',train_idx=train_idx,val_idx=val_idx,test_idx=test_idx,train_labels=train_labels,val_labels=val_labels,test_labels=test_labels)
+    np.savez('../data/papers100M/papers100M_labels.npz',train_idx=train_idx,val_idx=val_idx,test_idx=test_idx,train_labels=train_labels,val_labels=val_labels,test_labels=test_labels)
 
     print('making the graph undirected')
     data.edge_index=to_undirected(data.edge_index,data.num_nodes)
@@ -311,7 +356,7 @@ def papers100M():
 
         #save_adj(row_tmp, col_tmp, N=data.num_nodes, dataset_name='papers100M', savename='papers100M_snap'+str(st), snap=st)
 
-        with open('./data/papers100M/papers100M_Edgeupdate_snap' + str(st) + '.txt', 'w') as f:
+        with open('../data/papers100M/papers100M_Edgeupdate_snap' + str(st) + '.txt', 'w') as f:
             for i, j in zip(row_sn, col_sn):
                 f.write("%d %d\n" % (i, j))
                 f.write("%d %d\n" % (j, i))
@@ -319,9 +364,10 @@ def papers100M():
 
 def save_adj(row, col, N, dataset_name, savename, snap, full=False):
     adj=sp.csr_matrix((np.ones(row.shape[0]),(row,col)),shape=(N,N))
-    adj=adj+sp.eye(adj.shape[0])
+    if(self_loop):
+        adj=adj+sp.eye(adj.shape[0])
     print('snap:',snap,', edge:',adj.nnz)
-    save_path='./data/'+ dataset_name +'/'
+    save_path='../data/'+ dataset_name +'/'
 
     EL=adj.indices
     PL=adj.indptr
@@ -356,6 +402,6 @@ def save_adj(row, col, N, dataset_name, savename, snap, full=False):
     gc.collect()
 
 if __name__ == "__main__":
-    #papers100M()
-    #products()
+    # papers100M()
+    # products()
     arxiv()

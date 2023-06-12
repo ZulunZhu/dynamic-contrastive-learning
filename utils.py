@@ -4,7 +4,14 @@ import numpy as np
 from sklearn.metrics import f1_score
 from torch.utils.data import Dataset
 from propagation import InstantGNN
+import time
+import copy
 import pdb
+import sklearn.preprocessing
+def add_log(pth, log):
+  time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+  with open(pth, "a+") as f:
+    f.write(time_now + ": " + str(log) + "\n")
 
 def load_aminer_init(datastr, rmax, alpha):
     if datastr == "1984_author_dense":
@@ -36,24 +43,49 @@ def load_aminer_init(datastr, rmax, alpha):
     
     return features, train_labels, val_labels, test_labels, train_idx, val_idx, test_idx, memory_dataset, py_alg
 
-def load_ogb_init(datastr, alpha, rmax):
+def load_ogb_init(datastr, alpha, rmax, epsilon, algorithm):
     if(datastr=="papers100M"):
         m=3259203018; n=111059956 ##init graph
     elif(datastr=="arxiv"):
-        m=597039; n=169343
+        # m=427696; n=169343
+        m=597039; n=169343 ##with self_loop
+        # m=2315598; n=169343 ## full edge
     elif(datastr=="products"):
-        m=69634445; n=2449029
+        # m=69634445; n=2449029
+        m=67185416; n=2449029
     print("Load %s!" % datastr)
     
     py_alg = InstantGNN()
+
+
     features = np.load('./data/'+datastr+'/'+datastr+'_feat.npy')
-    memory_dataset = py_alg.initial_operation('./data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, features)
+    print("load the original feat....")
+
+
+    # features = np.load('./data/'+datastr+'/'+datastr+'_feat_norm.npy')
+    # print("load the norm feat....")
+
+
+    features=np.array(features,dtype=np.float64)
+    perm = torch.randperm(features.shape[0])
+    features_n = features[perm]
     
+    print("features.size()",np.size(features,0),"  ", np.size(features,1))
+    
+    print("features[357[37]",features[357][37])
+    memory_dataset = py_alg.initial_operation('./data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features, algorithm)
+    memory_dataset_n = py_alg.initial_operation('./data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features_n, algorithm)
+    # scaler = sklearn.preprocessing.StandardScaler()
+    # scaler.fit(features)
+    # features = scaler.transform(features)
+  
+
     data = np.load('./data/'+datastr+'/'+datastr+'_labels.npz')
     train_idx = torch.LongTensor(data['train_idx'])
     val_idx = torch.LongTensor(data['val_idx'])
     test_idx =torch.LongTensor(data['test_idx'])
     
+    print("train_idx", train_idx)
     train_labels = torch.LongTensor(data['train_labels'])
     val_labels = torch.LongTensor(data['val_labels'])
     test_labels = torch.LongTensor(data['test_labels'])
@@ -61,7 +93,7 @@ def load_ogb_init(datastr, alpha, rmax):
     val_labels=val_labels.reshape(val_labels.size(0),1)
     test_labels=test_labels.reshape(test_labels.size(0),1)
     
-    return features,train_labels,val_labels,test_labels,train_idx,val_idx,test_idx,memory_dataset, py_alg
+    return n,m,features,features_n,train_labels,val_labels,test_labels,train_idx,val_idx,test_idx,memory_dataset, py_alg
 
 def load_sbm_init(datastr, rmax, alpha):
     if datastr == "SBM-50000-50-20+1":
@@ -117,15 +149,28 @@ def com_accuracy(y_pred, y):
     accuracy = correct.to(dtype=torch.long) * 100. / len(y)
     return accuracy
 
-class SimpleDataset(Dataset):
-    def __init__(self,x,y):
-        self.x=x
-        self.y=y
-        assert self.x.size(0)==self.y.size(0)
+# Build the dataset for the positive and negtive data, here x.szie()!= x_n.size()
+# class ExtendDataset(Dataset):
+#     def __init__(self,x,x_n):
+#         self.x=x
+#         self.x_n = x_n
+#         self.ratio = self.x.size(0)/self.x_n.size(0)
+#     def __len__(self):
+#         return self.x_n.size(0)
 
+#     def __getitem__(self,idx):
+#         return self.x[(idx*self.ratio)],self.x_n[idx]
+
+class SimpleDataset(Dataset):
+    def __init__(self,x,x_n,y):
+        self.x=x
+        self.x_n = x_n
+        self.y=y
+        # assert self.x_n.size(0)==self.y.size(0)
+        # assert self.x.size(0)==self.x_n.size(0)
     def __len__(self):
         return self.x.size(0)
 
     def __getitem__(self,idx):
-        return self.x[idx],self.y[idx]
+        return self.x[idx],self.x_n[idx],self.y[idx]
 
