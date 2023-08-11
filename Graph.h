@@ -777,8 +777,8 @@ public:
 	double sigma = 0.5;
     double errorlimiter = 1.0;
     double insert_ratio = 1.0;
-	double rbmax_p = 1;
-    double rbmax_n = 1;
+	double rbmax_p = 1e-5;
+    double rbmax_n = -1e-5;
     double rbmax;
     double theta;
 	double n = 2.0;

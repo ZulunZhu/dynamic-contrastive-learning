@@ -1,6 +1,5 @@
 #include "instantAlg.h"
 #include "Graph.h"
-
 using namespace std;
 using namespace Eigen;
 
@@ -9,6 +8,11 @@ namespace propagation
 vector<vector<uint>> Instantgnn::update_graph(string updatefilename, vector<uint>&affected_nodelst, vector<vector<uint>>&delete_neighbors) // vector<vector<uint>>&add_adjs
 {
     ifstream infile(updatefilename.c_str());
+    
+    if(!infile.is_open()){
+        cerr << " Update file doesn't exist! " << endl;
+        exit(EXIT_FAILURE);
+    }
     //cout<<"updating graph " << updatefilename <<endl;
     uint v_from, v_to;
     int insertFLAG = 0;
@@ -90,7 +94,7 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
 
     double errorlimit=1.0/n;
     double epsrate=1;
-    config.rbmax = errorlimit*epsrate;
+    config.rbmax = 1e-4;
     
     
     
@@ -121,15 +125,15 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
     for(uint i=0; i<affected_nodelst.size(); i++)
     {
         uint affected_node = affected_nodelst[i];
-        for(int dim=0; dim<dimension; dim++)
+        for(int dim=0; dim<NUMTHREAD; dim++)
         {   
-            R_b[dim][affected_node] = feat(affected_node, dim);
+            R_b[dim][affected_node] = 1;
             candidate_sets_reverse[dim].push(affected_node);
             isCandidates_reverse[dim][affected_node] = true;
 
         }    
     }
-    Instantgnn::ppr_push(dimension, feat, true,candidate_sets_reverse,isCandidates_reverse,true,algorithm, true);
+    Instantgnn::ppr_push(NUMTHREAD, feat, true,candidate_sets_reverse,isCandidates_reverse,true,algorithm, true);
 
     inaccaracy_pos = vector<vector<double>>(dimension, vector<double>(vert, 1));
     inaccaracy_neg = vector<vector<double>>(dimension, vector<double>(vert, -1));
@@ -159,7 +163,7 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
             }
 
             if((1-inaccaracy_pos[i][j])==0){
-                r_mul_inacc = R[i][j]*(-1-inaccaracy_pos[i][j]);
+                r_mul_inacc = R[i][j]*(-1-inaccaracy_neg[i][j]);
 
             }else if((-1-inaccaracy_neg[i][j]==0)){
                 r_mul_inacc = R[i][j]*(1-inaccaracy_pos[i][j]);
@@ -193,8 +197,8 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
             // }
         }
 
-        double errbound_pos=rsum_pos*0.05;
-        double errbound_neg=rsum_neg*0.05;
+        double errbound_pos=rsum_pos*0.01;
+        double errbound_neg=rsum_neg*0.01;
         sort(error_pos_idx.begin(), error_pos_idx.end(), err_cmp_pos);
         sort(error_neg_idx.begin(), error_neg_idx.end(), err_cmp_neg);
         long rank = 0;
@@ -273,6 +277,16 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
                     isUpdateW[dim] = true;
                 }
             }
+            // if(!isCandidates[dim][affected_node]){
+            //         candidate_sets[dim].push(affected_node);
+            //         isCandidates[dim][affected_node] = true;
+            //     }
+            // if(!isUpdateW[dim]){
+            //     update_w.push_back(dim);
+            //     isUpdateW[dim] = true;
+            // }
+
+            
         }
     }
     clock_t end_t3 = clock();
@@ -506,16 +520,16 @@ double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn
     vector<queue<uint>> candidate_sets(dimension);
     vector<vector<bool>> isCandidates(dimension, vector<bool>(vert, false));
     if(algorithm == "instant"){
-        cout<<"before push feat(357,37):"<<feat(357,37)<<endl;
+        // cout<<"before push feat(357,37):"<<feat(357,37)<<endl;
         Instantgnn::ppr_push(dimension, feat, true,candidate_sets,isCandidates,true,algorithm, false);
-        cout<<"after push feat(357,37):"<<feat(357,37)<<endl;
+        // cout<<"after push feat(357,37):"<<feat(357,37)<<endl;
         
     }
     else if(algorithm == "speed_push"){
-        cout<<"before push feat(357,37):"<<feat(357,37)<<endl;
+        // cout<<"before push feat(357,37):"<<feat(357,37)<<endl;
         Instantgnn::ppr_push(dimension, feat, true,candidate_sets,isCandidates,true,algorithm, false);
-        cout<<"after push feat(357,37):"<<feat(357,37)<<endl;
-        cout<<"speed push"<<endl;
+        // cout<<"after push feat(357,37):"<<feat(357,37)<<endl;
+        // cout<<"speed push"<<endl;
     }
   
     double dataset_size=(double)(((long long)edges+vert)*4+(long long)vert*dimension*8)/1024.0/1024.0/1024.0;
@@ -532,7 +546,7 @@ void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool i
     gettimeofday(&t_start,NULL);
     if(log)
         cout<<"Begin propagation..."<<init << "...dimension:"<< dimension <<endl;
-        cout<<"candidate_sets:"<<candidate_sets[1].front()<<endl;
+        cout<<"candidate_sets:"<<candidate_sets[1].size()<<endl;
     int ti,start;
     int ends=0;
     
@@ -566,7 +580,7 @@ void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool i
     gettimeofday(&t_end, NULL);
     timeCost = t_end.tv_sec - t_start.tv_sec + (t_end.tv_usec - t_start.tv_usec)/1000000.0;
     if(log){
-        cout<<"The propagation time: "<<timeCost<<" s"<<endl;
+        cout<<"The propagation time: "<<timeCost<<" s"<< " reverse ? ="<<reverse<<endl;
         //cout<<"The clock time : "<<total_t<<" s"<<endl;
     }
     string filename = "./time_accuracy.log";
@@ -729,47 +743,149 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
 {
     // string algorithm = "instant";
     // string algorithm = "speed_push";
-    if(algorithm=="instant"){
-        int w;
-        for(int it=st;it<ed;it++)
-        {
-            if(init)
-                w = random_w[it];
-            else
-                w = update_w[it];
+    
+    int w;
+    for(int it=st;it<ed;it++)
+    {
+        if(init)
+            w = random_w[it];
+        else
+            w = update_w[it];
 
-            
-            vector<bool> push_round(4,false); 
-            queue<uint> candidate_set = candidate_sets[w];
-            vector<bool> isCandidate = isCandidates[w];
+        
+        
+        queue<uint> candidate_set = candidate_sets[w];
+        vector<bool> isCandidate = isCandidates[w];
 
-            double rowsum_p=rowsum_pos[w];
-            double rowsum_n=rowsum_neg[w];
-            double rmax_p=rowsum_p*rmax;
-            double rmax_n=rowsum_n*rmax;// not same as the paper
-            config.rbmax_p = rmax_p;
-            config.rbmax_n = rmax_n;
-            if(rmax_n == 0) rmax_n = -rowsum_p;  
+        double rowsum_p=rowsum_pos[w];
+        double rowsum_n=rowsum_neg[w];
+        double rmax_p=rowsum_p*rmax;
+        double rmax_n=rowsum_n*rmax;// not same as the paper
+        config.rbmax_p = config.rbmax;
+        config.rbmax_n = -config.rbmax;
+        if(rmax_n == 0) rmax_n = -rowsum_p;  
+        int iteration = 0;
+
+        if(reverse){
+            while(candidate_set.size() > 0)
+            {   
+                if (iteration%5000 ==0){
+                    cout<<"candidate_set.size(): "<<candidate_set.size()<<endl; 
+                }
+                
+                iteration++;           
+                uint tempNode = candidate_set.front();
+                candidate_set.pop();
+                isCandidate[tempNode] = false;
+                double old = R_b[w][tempNode];
+                R_b[w][tempNode] = 0;
+                pi_b[w][tempNode] += alpha*old;
+                
+                uint inSize = g.getInSize(tempNode);
+                for(uint i=0; i<inSize; i++)
+                {
+                    uint v = g.getInVert(tempNode, i);
+                    R_b[w][v] += (1-alpha) * old / Du[v] / Du[tempNode];
+                    if(!isCandidate[v])
+                    {
+                        if(R_b[w][v] > config.rbmax_p || R_b[w][v] < config.rbmax_n)
+                        {
+                            candidate_set.push(v);
+                            isCandidate[v] = true;
+                        }
+                    }
+                }
+            }
+        }else{
+
+            // if(init)
+            // {
+            //     for(uint i=0; i<vert; i++)
+            //     {
+            //         R[w][i] = feats(i, w);
+            //         feats(i, w) = 0;
+            //         if(R[w][i]>rmax_p || R[w][i]<rmax_n)
+            //         {
+            //             candidate_set.push(i);
+            //             isCandidate[i] = true;
+            //         }
+            //     }
+            // }
+            // cout<<"candidate_set.size(): "<<candidate_set.size()<<endl;
+            // while(candidate_set.size() > 0)
+            // {
+            //     uint tempNode = candidate_set.front();
+            //     candidate_set.pop();
+            //     isCandidate[tempNode] = false;
+            //     double old = R[w][tempNode];
+            //     R[w][tempNode] = 0;
+            //     feats(tempNode,w) += alpha*old;
+                
+            //     uint inSize = g.getInSize(tempNode);
+            //     for(uint i=0; i<inSize; i++)
+            //     {
+            //         uint v = g.getInVert(tempNode, i);
+            //         R[w][v] += (1-alpha) * old / Du[v] / Du[tempNode];
+            //         if(!isCandidate[v])
+            //         {
+            //             if(R[w][v] > rmax_p || R[w][v] < rmax_n)
+            //             {
+            //                 candidate_set.push(v);
+            //                 isCandidate[v] = true;
+            //             }
+            //         }
+            //     }
+            // }
 
 
-            if(reverse){
+
+            //****my code
+            if(init){
+                for(uint i=0; i<vert; i++){   
+                    R[w][i] = feats(i, w);
+                    feats(i, w) = 0;
+                }
+            }
+            // for(uint i=0; i<vert; i++){   //always push from scratch
+            //     R[w][i] = X(i, w);
+            //     feats(i, w) = 0;
+            // }
+            for(uint k = 0;k<4;k++){
+
+                for(uint i=0; i<vert; i++)
+                {   
+
+                    if(R[w][i]>rmax_p || R[w][i]<rmax_n)
+                    {
+                        candidate_set.push(i);
+                        isCandidate[i] = true;
+                    }
+                }
+                // cout<<"initial candidate_set.size(): "<<candidate_set.size()<<endl;
+                int num = 0;
+                // MSG(candidate_set.size());
                 while(candidate_set.size() > 0)
-                {                    
+                {   
+                    num++;
+                    // if(num%5000==0){
+                    //     MSG(candidate_set.size());
+                    // }        
                     uint tempNode = candidate_set.front();
                     candidate_set.pop();
                     isCandidate[tempNode] = false;
-                    double old = R_b[w][tempNode];
-                    R_b[w][tempNode] = 0;
-                    pi_b[w][tempNode] += alpha*old;
+                    double old = R[w][tempNode];
+                    
+                    R[w][tempNode] = 0;
+                    feats(tempNode,w) += alpha*old;
                     
                     uint inSize = g.getInSize(tempNode);
                     for(uint i=0; i<inSize; i++)
                     {
                         uint v = g.getInVert(tempNode, i);
-                        R_b[w][v] += (1-alpha) * old / Du[v] / Du[tempNode];
+                        R[w][v] += (1-alpha) * old / Du[v] / Du[tempNode];
                         if(!isCandidate[v])
                         {
-                            if(R_b[w][v] > config.rbmax_p || R_b[w][v] < config.rbmax_n)
+                            if(R[w][v] > rmax_p || R[w][v] < rmax_n)
                             {
                                 candidate_set.push(v);
                                 isCandidate[v] = true;
@@ -777,154 +893,67 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
                         }
                     }
                 }
-            }
-            else{
-
-                // if(init)
-                // {
-                //     for(uint i=0; i<vert; i++)
-                //     {
-                //         R[w][i] = feats(i, w);
-                //         feats(i, w) = 0;
-                //         if(R[w][i]>rmax_p || R[w][i]<rmax_n)
-                //         {
-                //             candidate_set.push(i);
-                //             isCandidate[i] = true;
-                //         }
-                //     }
-                // }
-
-                // while(candidate_set.size() > 0)
-                // {
-                //     uint tempNode = candidate_set.front();
-                //     candidate_set.pop();
-                //     isCandidate[tempNode] = false;
-                //     double old = R[w][tempNode];
-                //     R[w][tempNode] = 0;
-                //     feats(tempNode,w) += alpha*old;
-                    
-                //     uint inSize = g.getInSize(tempNode);
-                //     for(uint i=0; i<inSize; i++)
-                //     {
-                //         uint v = g.getInVert(tempNode, i);
-                //         R[w][v] += (1-alpha) * old / Du[v] / Du[tempNode];
-                //         if(!isCandidate[v])
-                //         {
-                //             if(R[w][v] > rmax_p || R[w][v] < rmax_n)
-                //             {
-                //                 candidate_set.push(v);
-                //                 isCandidate[v] = true;
-                //             }
-                //         }
-                //     }
-                // }
-                //****my code
-                if(init){
-                    for(uint i=0; i<vert; i++){   
-                        R[w][i] = feats(i, w);
-                        feats(i, w) = 0;
-                    }
-                }
-                // for(uint i=0; i<vert; i++){   //always push from scratch
-                //     R[w][i] = X(i, w);
-                //     feats(i, w) = 0;
-                // }
-                for(uint k = 0;k<4;k++){
-
-                    for(uint i=0; i<vert; i++)
-                    {   
-
-                        if(R[w][i]>rmax_p || R[w][i]<rmax_n)
-                        {
-                            candidate_set.push(i);
-                            isCandidate[i] = true;
-                        }
-                    }
-                    // cout<<"initial candidate_set.size(): "<<candidate_set.size()<<endl;
-                    int num = 0;
-                    // MSG(candidate_set.size());
-                    while(candidate_set.size() > 0)
-                    {   
-                        num++;
-                        // if(num%5000==0){
-                        //     MSG(candidate_set.size());
-                        // }        
-                        uint tempNode = candidate_set.front();
-                        candidate_set.pop();
-                        isCandidate[tempNode] = false;
-                        double old = R[w][tempNode];
-                        
-                        R[w][tempNode] = 0;
-                        feats(tempNode,w) += alpha*old;
-                        
-                        uint inSize = g.getInSize(tempNode);
-                        for(uint i=0; i<inSize; i++)
-                        {
-                            uint v = g.getInVert(tempNode, i);
-                            R[w][v] += (1-alpha) * old / Du[v] / Du[tempNode];
-                        }
-                    }
-                }//*****my code
-            }
-            // //Random walk!
-            // unsigned long long num_random_walk = omega;
-            // double row_sum_n = 0,row_sum_p = 0;
-            // for(uint j=0; j<vert; j++)
-            // {
-            //     if(R[w][j]>0)
-            //         row_sum_p+=R[w][j];
-            //     else
-            //         row_sum_n+=R[w][j];
-            // }
-            // for(uint id=0; id < vert; id++){
-            //     double check_sum;
-            //     double residual = R[w][id];
-            //     if(residual<0){
-            //        check_sum = row_sum_n;
-            //     }else if(residual>0){
-            //        check_sum = row_sum_p;
-            //     }else{
-            //         continue;
-            //     }
-            //     unsigned long num_s_rw = ceil(residual/check_sum*num_random_walk);
-            //     double ppr_incre = check_sum/num_random_walk*Du[id];
-            //     num_total_rw += num_s_rw;
-			// 	rw_count += num_s_rw;
-            //     for(unsigned long j=0; j<num_s_rw; j++){
-            //         int des = g.random_walk(id);
-            //         feats(des,w) += ppr_incre;
-            //     }
-            // }
-
-
-            // cout<<"1111111"<<endl;
-            vector<bool>().swap(isCandidates[w]);
+            }//*****my code
         }
+        // //Random walk!
+        // unsigned long long num_random_walk = omega;
+        // double row_sum_n = 0,row_sum_p = 0;
+        // for(uint j=0; j<vert; j++)
+        // {
+        //     if(R[w][j]>0)
+        //         row_sum_p+=R[w][j];
+        //     else
+        //         row_sum_n+=R[w][j];
+        // }
+        // for(uint id=0; id < vert; id++){
+        //     double check_sum;
+        //     double residual = R[w][id];
+        //     if(residual<0){
+        //        check_sum = row_sum_n;
+        //     }else if(residual>0){
+        //        check_sum = row_sum_p;
+        //     }else{
+        //         continue;
+        //     }
+        //     unsigned long num_s_rw = ceil(residual/check_sum*num_random_walk);
+        //     double ppr_incre = check_sum/num_random_walk*Du[id];
+        //     num_total_rw += num_s_rw;
+        // 	rw_count += num_s_rw;
+        //     for(unsigned long j=0; j<num_s_rw; j++){
+        //         int des = g.random_walk(id);
+        //         feats(des,w) += ppr_incre;
+        //     }
+        // }
+
+
+        // cout<<"1111111"<<endl;
+        vector<bool>().swap(isCandidates[w]);
     }
-    else if(algorithm == "speed_push"){
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(vert);
-        std::vector<PageRankScoreType> seed;
-        // cout<<"feat.rows():"<<feats.rows()<<" feat.cols():"<<feats.cols()<<"feats.col(i):"<<feats.col(54).size()<<endl;
-        // const type_info &objInfo = typeid(feats.col(54));
-        // cout<<"type::"<<objInfo.name()<<endl;
+
+// else if(algorithm == "speed_push"){
+//     SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(vert);
+//     std::vector<PageRankScoreType> seed;
+//     // cout<<"feat.rows():"<<feats.rows()<<" feat.cols():"<<feats.cols()<<"feats.col(i):"<<feats.col(54).size()<<endl;
+//     // const type_info &objInfo = typeid(feats.col(54));
+//     // cout<<"type::"<<objInfo.name()<<endl;
+    
+//     for (VertexIdType i = st; i < ed; i++) {
+//         // push_one(i, graph_structure, seed);
         
-        for (VertexIdType i = st; i < ed; i++) {
-            // push_one(i, graph_structure, seed);
-            
-            
-            // propagate_vector(feature_matrix[i], seed, vert, true);
-            
-           
+        
+//         // propagate_vector(feature_matrix[i], seed, vert, true);
+        
+        
 
-            ppr.calc_ppr_walk(graph_structure, feats, i, epsilon, alpha, lower_threshold);
-      
-            // Save embedding vector of feature i on all nodes to out_matrix
-         
-            // std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
-            //                 out_matrix[i%spt_size].begin());
+//         ppr.calc_ppr_walk(graph_structure, feats, i, epsilon, alpha, lower_threshold);
+    
+//         // Save embedding vector of feature i on all nodes to out_matrix
+        
+//         // std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
+//         //                 out_matrix[i%spt_size].begin());
 
-        }
-    }
+//     }
+// }
 }
 
 }

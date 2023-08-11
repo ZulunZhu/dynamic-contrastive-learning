@@ -58,7 +58,7 @@ def load_ogb_init(datastr, alpha, rmax, epsilon, algorithm):
     py_alg = InstantGNN()
 
 
-    features = np.load('./data/'+datastr+'/'+datastr+'_feat.npy')
+    features = np.load('../data/'+datastr+'/'+datastr+'_feat.npy')
     print("load the original feat....")
 
 
@@ -68,19 +68,21 @@ def load_ogb_init(datastr, alpha, rmax, epsilon, algorithm):
 
     features=np.array(features,dtype=np.float64)
     perm = torch.randperm(features.shape[0])
+
+    # features_n = copy.deepcopy(features)
     features_n = features[perm]
     
     print("features.size()",np.size(features,0),"  ", np.size(features,1))
     
     print("features[357[37]",features[357][37])
-    memory_dataset = py_alg.initial_operation('./data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features, algorithm)
-    memory_dataset_n = py_alg.initial_operation('./data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features_n, algorithm)
+    memory_dataset = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features, algorithm)
+    # memory_dataset_n = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features_n, algorithm)
     # scaler = sklearn.preprocessing.StandardScaler()
     # scaler.fit(features)
     # features = scaler.transform(features)
   
 
-    data = np.load('./data/'+datastr+'/'+datastr+'_labels.npz')
+    data = np.load('../data/'+datastr+'/'+datastr+'_labels.npz')
     train_idx = torch.LongTensor(data['train_idx'])
     val_idx = torch.LongTensor(data['val_idx'])
     test_idx =torch.LongTensor(data['test_idx'])
@@ -150,16 +152,17 @@ def com_accuracy(y_pred, y):
     return accuracy
 
 # Build the dataset for the positive and negtive data, here x.szie()!= x_n.size()
-# class ExtendDataset(Dataset):
-#     def __init__(self,x,x_n):
-#         self.x=x
-#         self.x_n = x_n
-#         self.ratio = self.x.size(0)/self.x_n.size(0)
-#     def __len__(self):
-#         return self.x_n.size(0)
+class ExtendDataset(Dataset):
+    def __init__(self,x,y):
+        self.x=x
+        self.y=y
 
-#     def __getitem__(self,idx):
-#         return self.x[(idx*self.ratio)],self.x_n[idx]
+    def __len__(self):
+        return self.x.size(0)
+
+    def __getitem__(self,idx):
+        # Might miss some training data
+        return self.x[idx],self.y[idx]
 
 class SimpleDataset(Dataset):
     def __init__(self,x,x_n,y):
@@ -172,5 +175,6 @@ class SimpleDataset(Dataset):
         return self.x.size(0)
 
     def __getitem__(self,idx):
+        
         return self.x[idx],self.x_n[idx],self.y[idx]
 

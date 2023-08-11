@@ -140,25 +140,18 @@ class PGL(nn.Module):
             self.mlp.append(nn.Linear(n_hidden, n_hidden))
         self.loss = nn.BCEWithLogitsLoss()
 
-    def forward(self, features, features_n, labels, loss_func):
+    def forward(self, features, labels, loss_func):
         h_1 = self.encoder(features, corrupt=False)
-        h_2 = self.encoder(features_n, corrupt=False)
+        
 
         sc_1 = h_1.squeeze(0)
-        sc_2 = h_2.squeeze(0)
+        
         for i, lin in enumerate(self.mlp):
             sc_1 = lin(sc_1)
-            sc_2 = lin(sc_2)
 
         sc_1 = sc_1.sum(1).unsqueeze(0)
-        sc_2 = sc_2.sum(1).unsqueeze(0)
-        lbl_1 = torch.ones(1, sc_1.shape[1])
-        lbl_2 = torch.zeros(1, sc_2.shape[1])
-        lbl = torch.cat((lbl_1, lbl_2), 1).cuda()
-
-        logits = torch.cat((sc_1, sc_2), 1)
-
-        loss = loss_func(logits, lbl)
+        labels = labels.unsqueeze(0)
+        loss = loss_func(sc_1, labels)
 
         return loss
 

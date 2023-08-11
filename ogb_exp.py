@@ -36,6 +36,7 @@ def main():
     # Algorithm parameters
     parser.add_argument('--alpha', type=float, default=0.2, help='alpha.')
     parser.add_argument('--rmax', type=float, default=1e-7, help='threshold.')
+    
     parser.add_argument('--epsilon', type=float, default=8, help='epsilon.')
     parser.add_argument("--n-ggd-epochs", type=int, default=1,
                         help="number of training epochs")
@@ -47,12 +48,12 @@ def main():
     parser.add_argument("--classifier-lr", type=float, default=0.05, help="classifier learning rate")
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate.')
     parser.add_argument('--weight_decay', type=float, default=0, help='weight decay.')
-    parser.add_argument('--layer', type=int, default=3, help='number of layers.')
+    parser.add_argument('--layer', type=int, default=4, help='number of layers.')
     parser.add_argument('--hidden', type=int, default=2048, help='hidden dimensions.')
-    parser.add_argument('--dropout', type=float, default=0, help='dropout rate.')
+    parser.add_argument('--dropout', type=float, default=0.3, help='dropout rate.')
     parser.add_argument('--bias', default='none', help='bias.')
     parser.add_argument("--proj_layers", type=int, default=1, help="number of project linear layers")
-    parser.add_argument('--epochs', type=int, default= 100, help='number of epochs.')
+    parser.add_argument('--epochs', type=int, default= 200, help='number of epochs.')
     parser.add_argument('--batch', type=int, default=10000, help='batch size.')
     parser.add_argument("--patience", type=int, default=50, help="early stop patience condition")
     parser.add_argument('--dev', type=int, default=0, help='device id.')
@@ -72,29 +73,31 @@ def main():
     
     n,m,features,features_n,train_labels,val_labels,test_labels,train_idx,val_idx,test_idx,memory_dataset, py_alg = load_ogb_init(args.dataset, args.alpha,args.rmax, args.epsilon, args.alg) ##
     print("features::",features)
-    features_p = copy.deepcopy(features)
-
+    
+    features_p = features
+    print('------------------ Initial -------------------')
     # print("train_idx:",train_idx.size())
     # print("val_idx:",val_idx.size())
     # print("test_idx:",test_idx.size())
 
     # prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
     print('------------------ update -------------------')
-    snapList = [f for f in glob('./data/'+args.dataset+'/*Edgeupdate_snap*.txt')]
+    snapList = [f for f in glob('../data/'+args.dataset+'/*Edgeupdate_snap*.txt')]
     print('number of snapshots: ', len(snapList))
     # print("features[36][36]::",features[36][36])
     for i in range(len(snapList)):
         change_node_list = np.zeros([n]) 
-        
+        features_copy = copy.deepcopy(features)
         # print("change_node_list",np.sum(change_node_list))
-        py_alg.snapshot_lazy('data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_snap'+str(i+1)+'.txt', args.rmax, args.alpha, features, features_p, change_node_list, args.alg)
+        py_alg.snapshot_lazy('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_snap'+str(i+1)+'.txt', args.rmax, args.alpha, features, features_p, change_node_list, args.alg)
         print("number of changed node", np.sum(change_node_list))
         # print("features_ori:",features)
         change_node_list = change_node_list.astype(bool)
         print("change_node_list:",change_node_list.shape)
-        features_p = features_p[~change_node_list]
+        features_p = features_copy[~change_node_list]
+        features_n = features_copy[change_node_list]
         print("feature_p.size:",features_p.shape)
-        
+        print("feature_n.size:",features_n.shape)
         prepare_to_train(i+1,features, features_p, features_n, m,train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
 
 def train(model, device, train_loader, optimizer):
@@ -171,15 +174,16 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     features_n = torch.FloatTensor(features_n).cuda()
     features_p = torch.FloatTensor(features_p).cuda()
     n = features_ori.size()[0]
+    feature_dim = features_ori.size(-1)
     print("Original feature size: ", features_ori.size(0))
     print("train_idx:", train_idx)
     print("n=", n, " m=", m)
 
     if(snapshot>0):    
        features = torch.cat((features_ori,features_p),dim=0)
-       features_n = torch.cat((features_n,features_n[:features.size(0)-features_ori.size(0), :]),dim=0)## Not finished yet
-       print("Added positive feature size: ", features.size(0)-features_ori.size(0))
-       assert features.size(0)==features_n.size(0)
+    #    features_n = torch.cat((features_n,features_n[:features.size(0)-features_ori.size(0), :]),dim=0)## Not finished yet
+    #    print("Added positive feature size: ", features.size(0)-features_ori.size(0))
+    #    assert features.size(0)==features_n.size(0)
        
     else:
         features = features_ori
@@ -196,19 +200,27 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     # valid_dataset = SimpleDataset(features_val,val_labels)
     # test_dataset = SimpleDataset(features_test, test_labels)
     print("features.size(0):", features.size(0))
-    print("features.size(0):", features_n.size(0))
-    fake_labels = torch.zeros(features.size(0))
+    print("features_n.size(0):", features_n.size(0))
+    fake_labels_1 = torch.ones(features.size(0))
+    fake_labels_0 = torch.zeros(features_n.size(0))
+    fake_labels = torch.cat((fake_labels_1,fake_labels_0),dim=0)
+
     print("fake_labels.size(0):", fake_labels.size(0))
     print("labels.size(0):", labels.size(0))
-    all_dataset_ori = SimpleDataset(features_ori,features_n,labels)
+
+    all_dataset_ori = ExtendDataset(features_ori,labels)
     all_loader_ori = DataLoader(all_dataset_ori, batch_size=args.batch,shuffle=False)
-    all_dataset = SimpleDataset(features,features_n,fake_labels)
-    all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=False)
-    # train_loader = DataLoader(train_dataset, batch_size=args.batch,shuffle=True)
-    # valid_loader = DataLoader(valid_dataset, batch_size=128, shuffle=False)
-    # test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 
+    # all_dataset = SimpleDataset(features,features_n,fake_labels)
+    # all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=False)
+    
+    #Cat all the feature
+    features = torch.cat((features,features_n),dim=0)
+    all_dataset = ExtendDataset(features,fake_labels)
+    all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=True)
+    
 
+    
     if args.cl_alg=="ggd":
         ### GGD method
         model = GGD(features.size(-1),
@@ -244,10 +256,10 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
         model.train()
         t0 = time.time()
 
-        for step, (x, x_n,y) in enumerate(all_loader):
+        for step, (x,y) in enumerate(all_loader):
             model_optimizer.zero_grad()
             # aug_feat = aug_feature_dropout(x, args.drop_feat)
-            loss = model(x.cuda(), x_n.cuda(), y.cuda(), b_xent)
+            loss = model(x.cuda(), y.cuda(), b_xent)
             loss.backward()
             model_optimizer.step()
 
@@ -287,13 +299,17 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
 
     # train classifier
     print('Loading {}th epoch'.format(best_t))
-
+    use_cl = True
     model.load_state_dict(torch.load('pkl/best_ggd' + tag + '.pkl'))
     model.eval()
     embeds = []
     #graph power embedding reinforcement
-    for step, (x,x_n, y) in enumerate(all_loader_ori):
-        embed = model.embed(x)
+    for step, (x, y) in enumerate(all_loader_ori):
+        if use_cl:
+            embed = model.embed(x)
+        else:
+            embed = x
+
         embeds.append(embed)
     embeds = torch.cat(embeds, dim = 0)
     torch.cuda.empty_cache()
@@ -318,9 +334,12 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     train_loader = DataLoader(train_dataset, batch_size=args.batch,shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=128, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
-
-    classifier = ClassMLP(args.hidden,args.hidden,label_dim,args.layer,args.dropout).cuda()
     
+    
+    if use_cl:
+        classifier = ClassMLP(args.hidden,args.hidden,label_dim,args.layer,args.dropout).cuda()
+    else:
+        classifier = ClassMLP(feature_dim,args.hidden,label_dim,args.layer,args.dropout).cuda()
     evaluator = Evaluator(name='ogbn-papers100M')
     classifier_optimizer = optim.Adam(classifier.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
