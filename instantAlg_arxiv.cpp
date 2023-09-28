@@ -94,7 +94,7 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
 
     double errorlimit=1.0/n;
     double epsrate=1;
-    config.rbmax = 1e-4;
+    config.rbmax = 1e-3;
     
     
     
@@ -125,16 +125,26 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
     for(uint i=0; i<affected_nodelst.size(); i++)
     {
         uint affected_node = affected_nodelst[i];
-        for(int dim=0; dim<NUMTHREAD; dim++)
-        {   
-            R_b[dim][affected_node] = 1;
-            candidate_sets_reverse[dim].push(affected_node);
-            isCandidates_reverse[dim][affected_node] = true;
+          
+        R_b[1][affected_node] = 1;
+        candidate_sets_reverse[1].push(affected_node);
+        isCandidates_reverse[1][affected_node] = true;
 
-        }    
+          
     }
-    Instantgnn::ppr_push(NUMTHREAD, feat, true,candidate_sets_reverse,isCandidates_reverse,true,algorithm, true);
+    // Instantgnn::ppr_push(NUMTHREAD, feat, true,candidate_sets_reverse,isCandidates_reverse,true,algorithm, true);
+    
+    struct timeval t_start,t_end;
+    double timeCost;
+    gettimeofday(&t_start,NULL);
 
+    Instantgnn::ppr_residue(feat,1,2,false,std::ref(candidate_sets_reverse),std::ref(isCandidates_reverse),algorithm,true);
+    
+    gettimeofday(&t_end, NULL);
+    timeCost = t_end.tv_sec - t_start.tv_sec + (t_end.tv_usec - t_start.tv_usec)/1000000.0;
+    cout<<"Reverse propagation time: "<<timeCost<<" s"<<endl;
+    //cout<<"The clock time : "<<total_t<<" s"<<endl;
+    
     inaccaracy_pos = vector<vector<double>>(dimension, vector<double>(vert, 1));
     inaccaracy_neg = vector<vector<double>>(dimension, vector<double>(vert, -1));
     
@@ -197,8 +207,8 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
             // }
         }
 
-        double errbound_pos=rsum_pos*0.01;
-        double errbound_neg=rsum_neg*0.01;
+        double errbound_pos=rsum_pos*1e-3;
+        double errbound_neg=rsum_neg*1e-3;
         sort(error_pos_idx.begin(), error_pos_idx.end(), err_cmp_pos);
         sort(error_neg_idx.begin(), error_neg_idx.end(), err_cmp_neg);
         long rank = 0;
@@ -450,9 +460,13 @@ double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn
         X = feat; // change in feat not influence X
     }
     
+    string filename = "./time.log";
+    ofstream queryfile(filename, ios::app);
+    queryfile<<"The dataset is = "<<dataset<<endl;
+    queryfile.close();
 
-    // dimension=feat.cols();
-    // cout<<"dimension: "<<dimension<<", col:"<<feat.rows()<<endl;
+    dimension=feat.cols();
+    cout<<"dimension: "<<dimension<<", col:"<<feat.rows()<<endl;
 
     dimension=min(feat.rows(),feat.cols());
     cout<<"dimension: "<<dimension<<", col:"<<max(feat.rows(),feat.cols())<<endl;
@@ -580,13 +594,14 @@ void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool i
     gettimeofday(&t_end, NULL);
     timeCost = t_end.tv_sec - t_start.tv_sec + (t_end.tv_usec - t_start.tv_usec)/1000000.0;
     if(log){
-        cout<<"The propagation time: "<<timeCost<<" s"<< " reverse ? ="<<reverse<<endl;
+        cout<<"snap: "<<config.snap <<" time cost:"<<timeCost<<" s"<< " reverse ? ="<<reverse<<endl;
         //cout<<"The clock time : "<<total_t<<" s"<<endl;
     }
-    string filename = "./time_accuracy.log";
+    string filename = "./time.log";
     ofstream queryfile(filename, ios::app);
-    queryfile<<"The propagation time when rmax = "<<rmax<<" is "<<timeCost<<endl;
+    queryfile<<"snap: "<<config.snap <<" time cost:"<<timeCost<<endl;
     queryfile.close();
+    config.snap+=1;
     vector<vector<bool>>().swap(isCandidates);
     vector<queue<uint>>().swap(candidate_sets);
 }
@@ -747,7 +762,10 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
     int w;
     for(int it=st;it<ed;it++)
     {
-        if(init)
+        if(reverse){
+            w=1;
+        }
+        else if(init)
             w = random_w[it];
         else
             w = update_w[it];
@@ -760,7 +778,7 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
         double rowsum_p=rowsum_pos[w];
         double rowsum_n=rowsum_neg[w];
         double rmax_p=rowsum_p*rmax;
-        double rmax_n=rowsum_n*rmax;// not same as the paper
+        double rmax_n=rowsum_n*rmax;// to scale with the feature
         config.rbmax_p = config.rbmax;
         config.rbmax_n = -config.rbmax;
         if(rmax_n == 0) rmax_n = -rowsum_p;  
@@ -769,9 +787,9 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
         if(reverse){
             while(candidate_set.size() > 0)
             {   
-                if (iteration%5000 ==0){
-                    cout<<"candidate_set.size(): "<<candidate_set.size()<<endl; 
-                }
+                // if (iteration%50000 ==0){
+                //     cout<<"candidate_set.size(): "<<candidate_set.size()<<endl; 
+                // }
                 
                 iteration++;           
                 uint tempNode = candidate_set.front();
@@ -785,7 +803,7 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
                 for(uint i=0; i<inSize; i++)
                 {
                     uint v = g.getInVert(tempNode, i);
-                    R_b[w][v] += (1-alpha) * old / Du[v] / Du[tempNode];
+                    R_b[w][v] += (1-alpha) * old / Du[v] / Du[v];
                     if(!isCandidate[v])
                     {
                         if(R_b[w][v] > config.rbmax_p || R_b[w][v] < config.rbmax_n)
@@ -811,7 +829,7 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
             //         }
             //     }
             // }
-            // cout<<"candidate_set.size(): "<<candidate_set.size()<<endl;
+            // // cout<<"candidate_set.size(): "<<candidate_set.size()<<endl;
             // while(candidate_set.size() > 0)
             // {
             //     uint tempNode = candidate_set.front();
@@ -851,14 +869,15 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
             //     feats(i, w) = 0;
             // }
             for(uint k = 0;k<4;k++){
+                if(init){
+                    for(uint i=0; i<vert; i++)
+                    {   
 
-                for(uint i=0; i<vert; i++)
-                {   
-
-                    if(R[w][i]>rmax_p || R[w][i]<rmax_n)
-                    {
-                        candidate_set.push(i);
-                        isCandidate[i] = true;
+                        if(R[w][i]>rmax_p || R[w][i]<rmax_n)
+                        {
+                            candidate_set.push(i);
+                            isCandidate[i] = true;
+                        }
                     }
                 }
                 // cout<<"initial candidate_set.size(): "<<candidate_set.size()<<endl;

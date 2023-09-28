@@ -11,18 +11,51 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from ogb.nodeproppred import Evaluator
 from utils import SimpleDataset
-from model import ClassMLP,PGL,Classifier,GGD
+from model import ClassMLP,PGL,Classifier,GGD, GGD_Encoder
 from utils import *
 from glob import glob
 from tqdm import tqdm
 from sklearn import preprocessing as sk_prep
+from sklearn import metrics
 import logging
 import copy
 import os
+import sys
+from sys import getsizeof
+import pynvml
+import resource
+from openTSNE import TSNE
+import matplotlib.pyplot as plt
+def show_gpu():
+    pynvml.nvmlInit()
+    handle = pynvml.nvmlDeviceGetHandleByIndex(0) # 0表示显卡标号
+    meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    print("GPU overall::",meminfo.total/1024**3, "GB") #总的显存大小
+    print("GPU allocated::",meminfo.used/1024**3, "GB")  #已用显存大小
+    print("GPU left::",meminfo.free/1024**3, "GB")  #剩余显存大小
+
+def tsne_plt(embeddings, labels, save_path=None, title='Title'):
+    print('Drawing t-SNE plot ...')
+    tsne = TSNE(n_components=3, perplexity=30, metric="euclidean", n_jobs=8, random_state=42, verbose=False)
+    embeddings = embeddings.cpu().numpy()
+    c = labels.cpu().numpy()
+
+    emb = tsne.fit(embeddings)  # Training
+
+    plt.figure(figsize=(10, 8))
+    plt.scatter(emb[:, 0], emb[:, 1], c=c, marker='o')
+    plt.colorbar()
+    plt.grid(True)
+    plt.title(title)
+    if save_path is not None:
+        plt.savefig(save_path)
+    plt.show()
+
 def get_free_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A5 GPU|grep Free >tmp')
     memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
     return np.argmax(memory_available)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -43,6 +76,7 @@ def main():
     parser.add_argument("--n-classifier-epochs", type=int, default=100, help="number of training epochs")
     parser.add_argument("--drop_feat", type=float, default=0.1,
                         help="feature dropout rate")
+    parser.add_argument('--use_gcl', default="yes", help='bias.')
     # Learining parameters
     
     parser.add_argument("--classifier-lr", type=float, default=0.05, help="classifier learning rate")
@@ -50,7 +84,7 @@ def main():
     parser.add_argument('--weight_decay', type=float, default=0, help='weight decay.')
     parser.add_argument('--layer', type=int, default=4, help='number of layers.')
     parser.add_argument('--hidden', type=int, default=2048, help='hidden dimensions.')
-    parser.add_argument('--dropout', type=float, default=0.3, help='dropout rate.')
+    parser.add_argument('--dropout', type=float, default=0, help='dropout rate.')
     parser.add_argument('--bias', default='none', help='bias.')
     parser.add_argument("--proj_layers", type=int, default=1, help="number of project linear layers")
     parser.add_argument('--epochs', type=int, default= 200, help='number of epochs.')
@@ -80,7 +114,8 @@ def main():
     # print("val_idx:",val_idx.size())
     # print("test_idx:",test_idx.size())
 
-    # prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
+    prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
+
     print('------------------ update -------------------')
     snapList = [f for f in glob('../data/'+args.dataset+'/*Edgeupdate_snap*.txt')]
     print('number of snapshots: ', len(snapList))
@@ -98,7 +133,11 @@ def main():
         features_n = features_copy[change_node_list]
         print("feature_p.size:",features_p.shape)
         print("feature_n.size:",features_n.shape)
-        prepare_to_train(i+1,features, features_p, features_n, m,train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
+        if(i>=11):
+            prepare_to_train(i+1,features, features_p, features_n, m,train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
+        
+        del features_copy
+        gc.collect()
 
 def train(model, device, train_loader, optimizer):
     model.train()
@@ -106,7 +145,7 @@ def train(model, device, train_loader, optimizer):
     time_epoch=0
     loss_list=[]
 
-    for step, (x, x_n, y) in enumerate(train_loader):
+    for step, (x, y) in enumerate(train_loader):
         t_st=time.time()
         x, y = x.cuda(), y.cuda()
         optimizer.zero_grad()
@@ -124,7 +163,7 @@ def train(model, device, train_loader, optimizer):
 def validate(model, device, loader, evaluator):
     model.eval()
     y_pred, y_true = [], []
-    for step,(x, x_n, y) in enumerate(loader):
+    for step,(x, y) in enumerate(loader):
         x = x.cuda()
         out = model(x)
         y_pred.append(torch.argmax(out, dim=1, keepdim=True).cpu())
@@ -140,15 +179,17 @@ def test(model, device, loader, evaluator,checkpt_file):
     model.load_state_dict(torch.load(checkpt_file))
     model.eval()
     y_pred, y_true = [], []
-    for step,(x, x_n, y) in enumerate(loader):
+    for step,(x, y) in enumerate(loader):
         x = x.cuda()
         out = model(x)
         y_pred.append(torch.argmax(out, dim=1, keepdim=True).cpu())
         y_true.append(y)
+    metric_macro = metrics.f1_score(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0), average='macro')
+    metric_micro = metrics.f1_score(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0), average='micro')
     return evaluator.eval({
         "y_true": torch.cat(y_true, dim=0),
         "y_pred": torch.cat(y_pred, dim=0),
-    })['acc']
+    })['acc'], metric_macro, metric_micro
 
 def aug_feature_dropout(input_feat, drop_percent=0.2):
     # aug_input_feat = copy.deepcopy((input_feat.squeeze(0)))
@@ -170,15 +211,15 @@ def evaluate(model, features, labels, mask):
         return correct.item() * 1.0 / len(labels)
 
 def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file):
-    features_ori = torch.FloatTensor(features_ori).cuda()
-    features_n = torch.FloatTensor(features_n).cuda()
-    features_p = torch.FloatTensor(features_p).cuda()
+    features_ori = torch.FloatTensor(features_ori)
+    features_n = torch.FloatTensor(features_n)
+    features_p = torch.FloatTensor(features_p)
     n = features_ori.size()[0]
     feature_dim = features_ori.size(-1)
     print("Original feature size: ", features_ori.size(0))
-    print("train_idx:", train_idx)
+    print("train_idx:", train_idx.size())
     print("n=", n, " m=", m)
-
+    all_labels = torch.zeros(features_ori.size(0),dtype=torch.int64)
     if(snapshot>0):    
        features = torch.cat((features_ori,features_p),dim=0)
     #    features_n = torch.cat((features_n,features_n[:features.size(0)-features_ori.size(0), :]),dim=0)## Not finished yet
@@ -208,8 +249,21 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     print("fake_labels.size(0):", fake_labels.size(0))
     print("labels.size(0):", labels.size(0))
 
-    all_dataset_ori = ExtendDataset(features_ori,labels)
-    all_loader_ori = DataLoader(all_dataset_ori, batch_size=args.batch,shuffle=False)
+    if(args.dataset=="tmall"):
+        print("train_idx.size()", train_idx.size())
+        print("train_labels.size()",train_labels.size())
+
+        all_labels.scatter_(0,train_idx,train_labels.squeeze(1))
+        all_labels.scatter_(0,val_idx,val_labels.squeeze(1))
+        all_labels.scatter_(0,test_idx,test_labels.squeeze(1))
+
+        print("all_labels[train_idx]", all_labels[train_idx])
+        all_dataset_ori = ExtendDataset(features_ori,all_labels)
+        all_loader_ori = DataLoader(all_dataset_ori, batch_size=args.batch,shuffle=False)
+    else:
+        all_dataset_ori = ExtendDataset(features_ori,labels)
+        all_loader_ori = DataLoader(all_dataset_ori, batch_size=args.batch,shuffle=False)
+    
 
     # all_dataset = SimpleDataset(features,features_n,fake_labels)
     # all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=False)
@@ -220,15 +274,15 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=True)
     
 
-    
+       
     if args.cl_alg=="ggd":
         ### GGD method
         model = GGD(features.size(-1),
-              args.hidden,
-              args.layer,
-              nn.PReLU(args.hidden),
-              args.dropout,
-              args.proj_layers)
+            args.hidden,
+            args.layer,
+            nn.PReLU(args.hidden),
+            args.dropout,
+            args.proj_layers)
     else:
         ### our method
         model = PGL(features.size(-1),
@@ -249,9 +303,9 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     best_t = 0
     counts = 0
     dur = []
-
+    time_forward=0
     tag = str(int(np.random.random() * 10000000000))
-
+    t_start = time.time()
     for epoch in range(args.n_ggd_epochs):
         model.train()
         t0 = time.time()
@@ -259,7 +313,10 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
         for step, (x,y) in enumerate(all_loader):
             model_optimizer.zero_grad()
             # aug_feat = aug_feature_dropout(x, args.drop_feat)
+            t_st=time.time()
             loss = model(x.cuda(), y.cuda(), b_xent)
+            time_forward+=(time.time()-t_st)
+            # print("time_forward",time_forward)
             loss.backward()
             model_optimizer.step()
 
@@ -276,16 +333,17 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
             break
 
         dur.append(time.time() - t0)
-
-        print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | "
-              "ETputs(KTEPS) {:.2f}".format(epoch, np.mean(dur), loss.item(),
+        print("time.time():", time.time())
+        print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | Time forward:{:.4f}  | "
+            "ETputs(KTEPS) {:.2f}".format(epoch, np.mean(dur), loss.item(), time_forward,
                                             m / np.mean(dur) / 1000))
 
         counts += 1
+    print("pretraining time:", time.time()-t_start)
     del features_n
     gc.collect()
     print('Training Completed.')
-
+    
     # create classifier model
     # classifier = Classifier(args.hidden, label_dim)
 
@@ -299,47 +357,73 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
 
     # train classifier
     print('Loading {}th epoch'.format(best_t))
-    use_cl = True
+    if args.use_gcl=="no":
+        use_cl = False
+        print(" without contractive learning!")
+    else:
+        use_cl = True
     model.load_state_dict(torch.load('pkl/best_ggd' + tag + '.pkl'))
     model.eval()
-    embeds = []
+    embeds_list = []
     #graph power embedding reinforcement
     for step, (x, y) in enumerate(all_loader_ori):
         if use_cl:
-            embed = model.embed(x)
+            embed = model.embed(x.cuda())
         else:
-            embed = x
+            embed = x.cuda()
 
-        embeds.append(embed)
-    embeds = torch.cat(embeds, dim = 0)
-    torch.cuda.empty_cache()
-    embeds = sk_prep.normalize(X=embeds.cpu().numpy(), norm="l2")
-
-    embeds = torch.FloatTensor(embeds).cuda()
+        embeds_list.append(embed)
+    show_gpu()
     del model
     del features
     del features_p
+    del model_optimizer
     gc.collect()
-    # embeds = features
-    print("embeds: ", embeds)
     
+    embeds = torch.cat(embeds_list, dim = 0)
+    # print(sys.getsizeof(embeds) / 1024 / 1024, 'MB')
 
+    # embeds = torch.as_tensor(embeds_list)
+    # embeds = torch.tensor( [item.cpu().detach().numpy() for item in embeds_list] )
+    del embeds_list
+    gc.collect()
+    
+    embeds = sk_prep.normalize(X=embeds.cpu().numpy(), norm="l2")
 
+    embeds = torch.FloatTensor(embeds).cuda()
+    
+    # embeds = features
+    # print("np.unique(labels)s: ", np.where(labels<5))
+    torch.cuda.empty_cache()
+
+    # Visualization
+    # plot_index = np.where(labels.cpu()>36)
+    
+    # plot_index = torch.LongTensor(plot_index).squeeze()
+    # plot_index = plot_index[:1000]
+    # print("plot_index: ", plot_index.size())
+    
+    # tsne_plt(embeds[plot_index], labels[plot_index].cuda(), save_path = "./convert/trained.png")
+
+    print("GPU used::",torch.cuda.memory_allocated()/1024/1024,"MB")
+
+    show_gpu()
+    if use_cl:
+        classifier = ClassMLP(args.hidden,args.hidden,label_dim,args.layer,args.dropout).cuda()
+    else:
+        classifier = ClassMLP(feature_dim,args.hidden,label_dim,args.layer,args.dropout).cuda()
     ### Instant original method
-    train_dataset = SimpleDataset(embeds[train_idx],embeds[train_idx],train_labels)
-    valid_dataset = SimpleDataset(embeds[val_idx],embeds[val_idx],val_labels)
-    test_dataset = SimpleDataset(embeds[test_idx], embeds[test_idx],test_labels)
+    train_dataset = ExtendDataset(embeds[train_idx],train_labels)
+    valid_dataset = ExtendDataset(embeds[val_idx],val_labels)
+    test_dataset = ExtendDataset(embeds[test_idx],test_labels)
 
     # all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=False)
     train_loader = DataLoader(train_dataset, batch_size=args.batch,shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=128, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
+
     
     
-    if use_cl:
-        classifier = ClassMLP(args.hidden,args.hidden,label_dim,args.layer,args.dropout).cuda()
-    else:
-        classifier = ClassMLP(feature_dim,args.hidden,label_dim,args.layer,args.dropout).cuda()
     evaluator = Evaluator(name='ogbn-papers100M')
     classifier_optimizer = optim.Adam(classifier.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -347,6 +431,7 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     best = 0
     best_epoch = 0
     train_time = 0
+    
     classifier.reset_parameters()
     print("--------------------------")
     print("Training...")
@@ -371,12 +456,18 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
         if bad_counter == args.patience:
             break
 
-    test_acc = test(classifier, args.dev, test_loader, evaluator,checkpt_file)
+    memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    test_acc, metric_macro, metric_micro = test(classifier, args.dev, test_loader, evaluator,checkpt_file)
     print(f"Train cost: {train_time:.2f}s")
     print('Load {}th epoch'.format(best_epoch))
     print(f"Test accuracy:{100*test_acc:.2f}%")
-
-
+    print(f"metric_macro:{100*metric_macro:.2f}%")
+    print(f"metric_micro:{100*metric_micro:.2f}%")
+    print(f"Memory: {memory / 2**20:.3f}GB")
+    with open('accuracy_and_memory.txt', 'a') as f:
+        print('Dataset:'+args.dataset+" Use gcl?"+str(use_cl), file=f)
+        print(f"snapshot:{snapshot:.2f}  "+f"metric_macro:{100*metric_macro:.2f}%  "+f"metric_micro:{100*metric_micro:.2f}%  "+f"Memory: {memory / 2**20:.3f}GB",file=f)
+        
 
     # dur = []
     # best_acc, best_val_acc = 0, 0
