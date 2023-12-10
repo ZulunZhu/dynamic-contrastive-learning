@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.metrics import f1_score
 from torch.utils.data import Dataset
 from propagation import InstantGNN
+import scipy
 import time
 import copy
 import pdb
@@ -43,7 +44,7 @@ def load_aminer_init(datastr, rmax, alpha):
     
     return features, train_labels, val_labels, test_labels, train_idx, val_idx, test_idx, memory_dataset, py_alg
 
-def load_ogb_init(datastr, alpha, rmax, epsilon, algorithm):
+def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     if(datastr=="papers100M"):
         m=3259203018; n=111059956 ##init graph
     elif(datastr=="arxiv"):
@@ -51,8 +52,21 @@ def load_ogb_init(datastr, alpha, rmax, epsilon, algorithm):
         m=597039; n=169343 ##with self_loop
         # m=2315598; n=169343 ## full edge
     elif(datastr=="products"):
-        # m=69634445; n=2449029
-        m=67185416; n=2449029
+        m=69634445; n=2449029##with self_loop
+        # m=67185416; n=2449029
+        # m=126167053; n=2449029 ## full edge
+    elif(datastr=="patent"):
+        m=5248988; n=2738012##with self_loop
+    elif(datastr=="tmall"):
+        m=5871256; n=577314##with self_loop
+    elif(datastr=="mag"):
+        m=1158475; n= 736389##with self_loop    
+    elif(datastr=="mooc"):
+        m=768635; n= 411749 ##with self_loop
+    elif(datastr=="wikipedia"):
+        m=193988; n= 157474 ##with self_loop
+    elif(datastr=="reddit"):
+        m=829479; n= 672447 ##with self_loop
     print("Load %s!" % datastr)
     
     py_alg = InstantGNN()
@@ -60,22 +74,24 @@ def load_ogb_init(datastr, alpha, rmax, epsilon, algorithm):
 
     features = np.load('../data/'+datastr+'/'+datastr+'_feat.npy')
     print("load the original feat....")
-
+    print("features::",features)
 
     # features = np.load('./data/'+datastr+'/'+datastr+'_feat_norm.npy')
     # print("load the norm feat....")
 
 
-    features=np.array(features,dtype=np.float64)
     perm = torch.randperm(features.shape[0])
 
     # features_n = copy.deepcopy(features)
+
     features_n = features[perm]
     
-    print("features.size()",np.size(features,0),"  ", np.size(features,1))
-    
-    print("features[357[37]",features[357][37])
-    memory_dataset = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features, algorithm)
+    features=np.array(features,dtype=np.float64)
+    features = np.ascontiguousarray(features)
+    print("features.shape",features.shape)
+    print("type(features):", type(features),features.dtype)
+    # print("python features[357[37]",features[357][37])
+    memory_dataset = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_full', m, n, rmax, rbmax, delta, alpha, epsilon,features, algorithm)
     # memory_dataset_n = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features_n, algorithm)
     # scaler = sklearn.preprocessing.StandardScaler()
     # scaler.fit(features)
@@ -87,15 +103,20 @@ def load_ogb_init(datastr, alpha, rmax, epsilon, algorithm):
     val_idx = torch.LongTensor(data['val_idx'])
     test_idx =torch.LongTensor(data['test_idx'])
     
-    print("train_idx", train_idx)
+    print("train_idx", train_idx>0)
     train_labels = torch.LongTensor(data['train_labels'])
     val_labels = torch.LongTensor(data['val_labels'])
     test_labels = torch.LongTensor(data['test_labels'])
+    
     train_labels=train_labels.reshape(train_labels.size(0),1)
     val_labels=val_labels.reshape(val_labels.size(0),1)
     test_labels=test_labels.reshape(test_labels.size(0),1)
-    
-    return n,m,features,features_n,train_labels,val_labels,test_labels,train_idx,val_idx,test_idx,memory_dataset, py_alg
+
+    labels = torch.randperm(features.shape[0]).unsqueeze(1)
+    if (datastr=="mooc"):
+        labels = torch.LongTensor(data['all_labels'])
+        labels=labels.reshape(labels.size(0),1)
+    return n,m,features,features_n,train_labels,val_labels,test_labels,labels, train_idx,val_idx,test_idx,memory_dataset, py_alg
 
 def load_sbm_init(datastr, rmax, alpha):
     if datastr == "SBM-50000-50-20+1":
@@ -109,7 +130,7 @@ def load_sbm_init(datastr, rmax, alpha):
 
     print("Load %s!" % datastr)
 
-    labels = np.loadtxt('./data/'+datastr+'/'+datastr+'_label.txt')
+    labels = np.loadtxt('../data/'+datastr+'/'+datastr+'_label.txt')
     
     py_alg = InstantGNN()
     
@@ -124,8 +145,8 @@ def load_sbm_init(datastr, rmax, alpha):
     val_idx = torch.LongTensor(val_idx)
     test_idx = torch.LongTensor(test_idx)
         
-    features = np.load('./data/'+datastr+'/'+datastr+'_encode_'+str(encode_len)+'_feat.npy')
-    memory_dataset = py_alg.initial_operation('./data/'+datastr+'/adjs/', datastr+'_init', m, n, rmax, alpha, features)
+    features = np.load('../data/'+datastr+'/'+datastr+'_encode_'+str(encode_len)+'_feat.npy')
+    memory_dataset = py_alg.initial_operation('../data/'+datastr+'/adjs/', datastr+'_init', m, n, rmax, alpha, features)
     
     train_labels = torch.LongTensor(labels[train_idx])
     val_labels = torch.LongTensor(labels[val_idx])

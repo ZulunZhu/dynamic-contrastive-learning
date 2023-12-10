@@ -190,7 +190,7 @@ def main():
 
     print('--------------------- update ----------------------')
     for i in range(10):
-        py_alg.snapshot_operation('./data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_snap'+str(i)+'.txt', args.rmax, args.alpha, features)
+        py_alg.snapshot_operation('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_snap'+str(i)+'.txt', args.rmax, args.alpha, features)
         mem = psutil.virtual_memory()
         memory_cost = mem.used / 1024 / 1024 / 1024 - initial_memory
         print('snapshot_operation ' + str(i) + ' cost: ', memory_cost)

@@ -53,11 +53,11 @@ namespace propagation{
         vector<double>Du;
         Config config;
         int dimension;
-        double initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double alphaa,double epsilonn,Eigen::Map<Eigen::MatrixXd> &feat, string algorithm);
+        double initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double rbmax, double delta, double alphaa,double epsilonn,Eigen::Map<Eigen::MatrixXd> &feat, string algorithm);
         void ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, bool log, string algorithm, bool reverse);
         void ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, string algorithm, bool reverse);
         void snapshot_operation(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, string algorithm);
-        void snapshot_lazy(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &feat_p, Eigen::Map<Eigen::MatrixXd> &change_node_list, string algorithm);
+        void snapshot_lazy(string updatefilename, double rmaxx,double rbmax, double delta,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat, Eigen::Map<Eigen::MatrixXd> &feat_p, Eigen::Map<Eigen::MatrixXd> &change_node_list, string algorithm);
         vector<vector<uint>> update_graph(string updatefilename, vector<uint>&affected_nodelst, vector<vector<uint>>&delete_neighbors);
     };
 }

@@ -1,0 +1,1 @@
+python ogb_exp.py --dataset products --layer 4 --hidden 1024 --alpha 0.1 --dropout 0.3 --alg instant --cl_alg PGL --use_gcl no

@@ -4,12 +4,12 @@
 {
     "distutils": {
         "depends": [
+            "/home/ubuntu/.local/lib/python3.8/site-packages/numpy/core/include/numpy/arrayobject.h",
+            "/home/ubuntu/.local/lib/python3.8/site-packages/numpy/core/include/numpy/arrayscalars.h",
+            "/home/ubuntu/.local/lib/python3.8/site-packages/numpy/core/include/numpy/ndarrayobject.h",
+            "/home/ubuntu/.local/lib/python3.8/site-packages/numpy/core/include/numpy/ndarraytypes.h",
+            "/home/ubuntu/.local/lib/python3.8/site-packages/numpy/core/include/numpy/ufuncobject.h",
             "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/eigency/eigency_cpp.h",
-            "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/numpy/core/include/numpy/arrayobject.h",
-            "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/numpy/core/include/numpy/arrayscalars.h",
-            "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/numpy/core/include/numpy/ndarrayobject.h",
-            "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/numpy/core/include/numpy/ndarraytypes.h",
-            "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/numpy/core/include/numpy/ufuncobject.h",
             "instantAlg.h",
             "instantAlg_arxiv.cpp"
         ],
@@ -20,7 +20,7 @@
             "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/eigency",
             ".",
             "module-dir-name",
-            "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/numpy/core/include",
+            "/home/ubuntu/.local/lib/python3.8/site-packages/numpy/core/include",
             "/home/ubuntu/miniconda3/envs/instant0/lib/python3.8/site-packages/eigency/eigen_3.2.8",
             "./eigen3"
         ],
@@ -1737,6 +1737,8 @@ static const char __pyx_k_path[] = "path";
 static const char __pyx_k_rmax[] = "rmax";
 static const char __pyx_k_test[] = "__test__";
 static const char __pyx_k_alpha[] = "alpha";
+static const char __pyx_k_delta[] = "delta";
+static const char __pyx_k_rbmax[] = "rbmax";
 static const char __pyx_k_array3[] = "array3";
 static const char __pyx_k_array4[] = "array4";
 static const char __pyx_k_array5[] = "array5";
@@ -1768,6 +1770,7 @@ static PyObject *__pyx_n_s_array4;
 static PyObject *__pyx_n_s_array5;
 static PyObject *__pyx_n_s_cline_in_traceback;
 static PyObject *__pyx_n_s_dataset;
+static PyObject *__pyx_n_s_delta;
 static PyObject *__pyx_n_s_encode;
 static PyObject *__pyx_n_s_epsilon;
 static PyObject *__pyx_n_s_getstate;
@@ -1779,6 +1782,7 @@ static PyObject *__pyx_kp_s_no_default___reduce___due_to_non;
 static PyObject *__pyx_kp_s_numpy_core_multiarray_failed_to;
 static PyObject *__pyx_kp_s_numpy_core_umath_failed_to_impor;
 static PyObject *__pyx_n_s_path;
+static PyObject *__pyx_n_s_rbmax;
 static PyObject *__pyx_n_s_reduce;
 static PyObject *__pyx_n_s_reduce_cython;
 static PyObject *__pyx_n_s_reduce_ex;
@@ -1788,8 +1792,8 @@ static PyObject *__pyx_n_s_setstate_cython;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_upfile;
 static int __pyx_pf_11propagation_10InstantGNN___cinit__(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_path, PyObject *__pyx_v_dataset, unsigned int __pyx_v_m, unsigned int __pyx_v_n, PyObject *__pyx_v_rmax, PyObject *__pyx_v_alpha, PyObject *__pyx_v_epsilon, PyArrayObject *__pyx_v_array3, PyObject *__pyx_v_algorithm); /* proto */
-static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_upfile, PyObject *__pyx_v_rmax, PyObject *__pyx_v_alpha, PyArrayObject *__pyx_v_array3, PyArrayObject *__pyx_v_array4, PyArrayObject *__pyx_v_array5, PyObject *__pyx_v_algorithm); /* proto */
+static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_path, PyObject *__pyx_v_dataset, unsigned int __pyx_v_m, unsigned int __pyx_v_n, PyObject *__pyx_v_rmax, PyObject *__pyx_v_rbmax, PyObject *__pyx_v_delta, PyObject *__pyx_v_alpha, PyObject *__pyx_v_epsilon, PyArrayObject *__pyx_v_array3, PyObject *__pyx_v_algorithm); /* proto */
+static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_upfile, PyObject *__pyx_v_rmax, PyObject *__pyx_v_rbmax, PyObject *__pyx_v_delta, PyObject *__pyx_v_alpha, PyArrayObject *__pyx_v_array3, PyArrayObject *__pyx_v_array4, PyArrayObject *__pyx_v_array5, PyObject *__pyx_v_algorithm); /* proto */
 static PyObject *__pyx_pf_11propagation_10InstantGNN_6snapshot_operation(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_upfile, PyObject *__pyx_v_rmax, PyObject *__pyx_v_alpha, PyArrayObject *__pyx_v_array3, PyObject *__pyx_v_algorithm); /* proto */
 static PyObject *__pyx_pf_11propagation_10InstantGNN_8__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_11propagation_10InstantGNN_10__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
@@ -1838,7 +1842,7 @@ static int __pyx_pf_11propagation_10InstantGNN___cinit__(struct __pyx_obj_11prop
  * 	def __cinit__(self):
  * 		self.c_instantgnn=Instantgnn()             # <<<<<<<<<<<<<<
  * 
- * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax,alpha,epsilon,np.ndarray array3, algorithm):
+ * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax, rbmax, delta, alpha,epsilon,np.ndarray array3, algorithm):
  */
   try {
     __pyx_t_1 = propagation::Instantgnn();
@@ -1870,8 +1874,8 @@ static int __pyx_pf_11propagation_10InstantGNN___cinit__(struct __pyx_obj_11prop
 /* "propagation.pyx":9
  * 		self.c_instantgnn=Instantgnn()
  * 
- * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax,alpha,epsilon,np.ndarray array3, algorithm):             # <<<<<<<<<<<<<<
- * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
+ * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax, rbmax, delta, alpha,epsilon,np.ndarray array3, algorithm):             # <<<<<<<<<<<<<<
+ * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,rbmax, delta,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
  * 
  */
 
@@ -1883,6 +1887,8 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_3initial_operation(PyObject
   unsigned int __pyx_v_m;
   unsigned int __pyx_v_n;
   PyObject *__pyx_v_rmax = 0;
+  PyObject *__pyx_v_rbmax = 0;
+  PyObject *__pyx_v_delta = 0;
   PyObject *__pyx_v_alpha = 0;
   PyObject *__pyx_v_epsilon = 0;
   PyArrayObject *__pyx_v_array3 = 0;
@@ -1894,12 +1900,16 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_3initial_operation(PyObject
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("initial_operation (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_path,&__pyx_n_s_dataset,&__pyx_n_s_m,&__pyx_n_s_n,&__pyx_n_s_rmax,&__pyx_n_s_alpha,&__pyx_n_s_epsilon,&__pyx_n_s_array3,&__pyx_n_s_algorithm,0};
-    PyObject* values[9] = {0,0,0,0,0,0,0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_path,&__pyx_n_s_dataset,&__pyx_n_s_m,&__pyx_n_s_n,&__pyx_n_s_rmax,&__pyx_n_s_rbmax,&__pyx_n_s_delta,&__pyx_n_s_alpha,&__pyx_n_s_epsilon,&__pyx_n_s_array3,&__pyx_n_s_algorithm,0};
+    PyObject* values[11] = {0,0,0,0,0,0,0,0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case 11: values[10] = PyTuple_GET_ITEM(__pyx_args, 10);
+        CYTHON_FALLTHROUGH;
+        case 10: values[9] = PyTuple_GET_ITEM(__pyx_args, 9);
+        CYTHON_FALLTHROUGH;
         case  9: values[8] = PyTuple_GET_ITEM(__pyx_args, 8);
         CYTHON_FALLTHROUGH;
         case  8: values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
@@ -1930,55 +1940,67 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_3initial_operation(PyObject
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_dataset)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 1); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 1); __PYX_ERR(1, 9, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_m)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 2); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 2); __PYX_ERR(1, 9, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_n)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 3); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 3); __PYX_ERR(1, 9, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_rmax)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 4); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 4); __PYX_ERR(1, 9, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
-        if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_alpha)) != 0)) kw_args--;
+        if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_rbmax)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 5); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 5); __PYX_ERR(1, 9, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  6:
-        if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_epsilon)) != 0)) kw_args--;
+        if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_delta)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 6); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 6); __PYX_ERR(1, 9, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  7:
-        if (likely((values[7] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array3)) != 0)) kw_args--;
+        if (likely((values[7] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_alpha)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 7); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 7); __PYX_ERR(1, 9, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  8:
-        if (likely((values[8] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_algorithm)) != 0)) kw_args--;
+        if (likely((values[8] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_epsilon)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, 8); __PYX_ERR(1, 9, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 8); __PYX_ERR(1, 9, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  9:
+        if (likely((values[9] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array3)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 9); __PYX_ERR(1, 9, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case 10:
+        if (likely((values[10] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_algorithm)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, 10); __PYX_ERR(1, 9, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
         if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "initial_operation") < 0)) __PYX_ERR(1, 9, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 9) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 11) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -1990,27 +2012,31 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_3initial_operation(PyObject
       values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
       values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
       values[8] = PyTuple_GET_ITEM(__pyx_args, 8);
+      values[9] = PyTuple_GET_ITEM(__pyx_args, 9);
+      values[10] = PyTuple_GET_ITEM(__pyx_args, 10);
     }
     __pyx_v_path = values[0];
     __pyx_v_dataset = values[1];
     __pyx_v_m = __Pyx_PyInt_As_unsigned_int(values[2]); if (unlikely((__pyx_v_m == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(1, 9, __pyx_L3_error)
     __pyx_v_n = __Pyx_PyInt_As_unsigned_int(values[3]); if (unlikely((__pyx_v_n == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(1, 9, __pyx_L3_error)
     __pyx_v_rmax = values[4];
-    __pyx_v_alpha = values[5];
-    __pyx_v_epsilon = values[6];
-    __pyx_v_array3 = ((PyArrayObject *)values[7]);
-    __pyx_v_algorithm = values[8];
+    __pyx_v_rbmax = values[5];
+    __pyx_v_delta = values[6];
+    __pyx_v_alpha = values[7];
+    __pyx_v_epsilon = values[8];
+    __pyx_v_array3 = ((PyArrayObject *)values[9]);
+    __pyx_v_algorithm = values[10];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 9, 9, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(1, 9, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("initial_operation", 1, 11, 11, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(1, 9, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("propagation.InstantGNN.initial_operation", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_array3), __pyx_ptype_5numpy_ndarray, 1, "array3", 0))) __PYX_ERR(1, 9, __pyx_L1_error)
-  __pyx_r = __pyx_pf_11propagation_10InstantGNN_2initial_operation(((struct __pyx_obj_11propagation_InstantGNN *)__pyx_v_self), __pyx_v_path, __pyx_v_dataset, __pyx_v_m, __pyx_v_n, __pyx_v_rmax, __pyx_v_alpha, __pyx_v_epsilon, __pyx_v_array3, __pyx_v_algorithm);
+  __pyx_r = __pyx_pf_11propagation_10InstantGNN_2initial_operation(((struct __pyx_obj_11propagation_InstantGNN *)__pyx_v_self), __pyx_v_path, __pyx_v_dataset, __pyx_v_m, __pyx_v_n, __pyx_v_rmax, __pyx_v_rbmax, __pyx_v_delta, __pyx_v_alpha, __pyx_v_epsilon, __pyx_v_array3, __pyx_v_algorithm);
 
   /* function exit code */
   goto __pyx_L0;
@@ -2021,7 +2047,7 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_3initial_operation(PyObject
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_path, PyObject *__pyx_v_dataset, unsigned int __pyx_v_m, unsigned int __pyx_v_n, PyObject *__pyx_v_rmax, PyObject *__pyx_v_alpha, PyObject *__pyx_v_epsilon, PyArrayObject *__pyx_v_array3, PyObject *__pyx_v_algorithm) {
+static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_path, PyObject *__pyx_v_dataset, unsigned int __pyx_v_m, unsigned int __pyx_v_n, PyObject *__pyx_v_rmax, PyObject *__pyx_v_rbmax, PyObject *__pyx_v_delta, PyObject *__pyx_v_alpha, PyObject *__pyx_v_epsilon, PyArrayObject *__pyx_v_array3, PyObject *__pyx_v_algorithm) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -2032,9 +2058,11 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct _
   double __pyx_t_6;
   double __pyx_t_7;
   double __pyx_t_8;
-  eigency::Map<Eigen::MatrixXd>  __pyx_t_9;
-  std::string __pyx_t_10;
-  double __pyx_t_11;
+  double __pyx_t_9;
+  double __pyx_t_10;
+  eigency::Map<Eigen::MatrixXd>  __pyx_t_11;
+  std::string __pyx_t_12;
+  double __pyx_t_13;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -2042,10 +2070,10 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct _
 
   /* "propagation.pyx":10
  * 
- * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax,alpha,epsilon,np.ndarray array3, algorithm):
- * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())             # <<<<<<<<<<<<<<
+ * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax, rbmax, delta, alpha,epsilon,np.ndarray array3, algorithm):
+ * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,rbmax, delta,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())             # <<<<<<<<<<<<<<
  * 
- * 	def snapshot_lazy(self, upfile, rmax,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):
+ * 	def snapshot_lazy(self, upfile, rmax,rbmax, delta,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_path, __pyx_n_s_encode); if (unlikely(!__pyx_t_2)) __PYX_ERR(1, 10, __pyx_L1_error)
@@ -2087,10 +2115,12 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct _
   __pyx_t_5 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_6 = __pyx_PyFloat_AsDouble(__pyx_v_rmax); if (unlikely((__pyx_t_6 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
-  __pyx_t_7 = __pyx_PyFloat_AsDouble(__pyx_v_alpha); if (unlikely((__pyx_t_7 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
-  __pyx_t_8 = __pyx_PyFloat_AsDouble(__pyx_v_epsilon); if (unlikely((__pyx_t_8 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
+  __pyx_t_7 = __pyx_PyFloat_AsDouble(__pyx_v_rbmax); if (unlikely((__pyx_t_7 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
+  __pyx_t_8 = __pyx_PyFloat_AsDouble(__pyx_v_delta); if (unlikely((__pyx_t_8 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
+  __pyx_t_9 = __pyx_PyFloat_AsDouble(__pyx_v_alpha); if (unlikely((__pyx_t_9 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
+  __pyx_t_10 = __pyx_PyFloat_AsDouble(__pyx_v_epsilon); if (unlikely((__pyx_t_10 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
   try {
-    __pyx_t_9 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array3);
+    __pyx_t_11 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array3);
   } catch(...) {
     __Pyx_CppExn2PyErr();
     __PYX_ERR(1, 10, __pyx_L1_error)
@@ -2112,15 +2142,15 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct _
   if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_10 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
+  __pyx_t_12 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(1, 10, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   try {
-    __pyx_t_11 = __pyx_v_self->c_instantgnn.initial_operation(__pyx_t_4, __pyx_t_5, __pyx_v_m, __pyx_v_n, __pyx_t_6, __pyx_t_7, __pyx_t_8, __pyx_t_9, __pyx_t_10);
+    __pyx_t_13 = __pyx_v_self->c_instantgnn.initial_operation(__pyx_t_4, __pyx_t_5, __pyx_v_m, __pyx_v_n, __pyx_t_6, __pyx_t_7, __pyx_t_8, __pyx_t_9, __pyx_t_10, __pyx_t_11, __pyx_t_12);
   } catch(...) {
     __Pyx_CppExn2PyErr();
     __PYX_ERR(1, 10, __pyx_L1_error)
   }
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_t_11); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 10, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_t_13); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -2129,8 +2159,8 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct _
   /* "propagation.pyx":9
  * 		self.c_instantgnn=Instantgnn()
  * 
- * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax,alpha,epsilon,np.ndarray array3, algorithm):             # <<<<<<<<<<<<<<
- * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
+ * 	def initial_operation(self,path,dataset,unsigned int m,unsigned int n,rmax, rbmax, delta, alpha,epsilon,np.ndarray array3, algorithm):             # <<<<<<<<<<<<<<
+ * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,rbmax, delta,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
  * 
  */
 
@@ -2148,10 +2178,10 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_2initial_operation(struct _
 }
 
 /* "propagation.pyx":12
- * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
+ * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,rbmax, delta,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
  * 
- * 	def snapshot_lazy(self, upfile, rmax,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):             # <<<<<<<<<<<<<<
- * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
+ * 	def snapshot_lazy(self, upfile, rmax,rbmax, delta,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):             # <<<<<<<<<<<<<<
+ * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, rbmax, delta, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
  * 
  */
 
@@ -2160,6 +2190,8 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_5snapshot_lazy(PyObject *__
 static PyObject *__pyx_pw_11propagation_10InstantGNN_5snapshot_lazy(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_upfile = 0;
   PyObject *__pyx_v_rmax = 0;
+  PyObject *__pyx_v_rbmax = 0;
+  PyObject *__pyx_v_delta = 0;
   PyObject *__pyx_v_alpha = 0;
   PyArrayObject *__pyx_v_array3 = 0;
   PyArrayObject *__pyx_v_array4 = 0;
@@ -2172,12 +2204,16 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_5snapshot_lazy(PyObject *__
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("snapshot_lazy (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_upfile,&__pyx_n_s_rmax,&__pyx_n_s_alpha,&__pyx_n_s_array3,&__pyx_n_s_array4,&__pyx_n_s_array5,&__pyx_n_s_algorithm,0};
-    PyObject* values[7] = {0,0,0,0,0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_upfile,&__pyx_n_s_rmax,&__pyx_n_s_rbmax,&__pyx_n_s_delta,&__pyx_n_s_alpha,&__pyx_n_s_array3,&__pyx_n_s_array4,&__pyx_n_s_array5,&__pyx_n_s_algorithm,0};
+    PyObject* values[9] = {0,0,0,0,0,0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  9: values[8] = PyTuple_GET_ITEM(__pyx_args, 8);
+        CYTHON_FALLTHROUGH;
+        case  8: values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
+        CYTHON_FALLTHROUGH;
         case  7: values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
         CYTHON_FALLTHROUGH;
         case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
@@ -2204,43 +2240,55 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_5snapshot_lazy(PyObject *__
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_rmax)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 7, 7, 1); __PYX_ERR(1, 12, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 1); __PYX_ERR(1, 12, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
-        if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_alpha)) != 0)) kw_args--;
+        if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_rbmax)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 7, 7, 2); __PYX_ERR(1, 12, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 2); __PYX_ERR(1, 12, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
-        if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array3)) != 0)) kw_args--;
+        if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_delta)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 7, 7, 3); __PYX_ERR(1, 12, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 3); __PYX_ERR(1, 12, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
-        if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array4)) != 0)) kw_args--;
+        if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_alpha)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 7, 7, 4); __PYX_ERR(1, 12, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 4); __PYX_ERR(1, 12, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
-        if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array5)) != 0)) kw_args--;
+        if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array3)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 7, 7, 5); __PYX_ERR(1, 12, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 5); __PYX_ERR(1, 12, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  6:
-        if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_algorithm)) != 0)) kw_args--;
+        if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array4)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 7, 7, 6); __PYX_ERR(1, 12, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 6); __PYX_ERR(1, 12, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  7:
+        if (likely((values[7] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_array5)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 7); __PYX_ERR(1, 12, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  8:
+        if (likely((values[8] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_algorithm)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, 8); __PYX_ERR(1, 12, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
         if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "snapshot_lazy") < 0)) __PYX_ERR(1, 12, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 7) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 9) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -2250,18 +2298,22 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_5snapshot_lazy(PyObject *__
       values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
       values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
       values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+      values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
+      values[8] = PyTuple_GET_ITEM(__pyx_args, 8);
     }
     __pyx_v_upfile = values[0];
     __pyx_v_rmax = values[1];
-    __pyx_v_alpha = values[2];
-    __pyx_v_array3 = ((PyArrayObject *)values[3]);
-    __pyx_v_array4 = ((PyArrayObject *)values[4]);
-    __pyx_v_array5 = ((PyArrayObject *)values[5]);
-    __pyx_v_algorithm = values[6];
+    __pyx_v_rbmax = values[2];
+    __pyx_v_delta = values[3];
+    __pyx_v_alpha = values[4];
+    __pyx_v_array3 = ((PyArrayObject *)values[5]);
+    __pyx_v_array4 = ((PyArrayObject *)values[6]);
+    __pyx_v_array5 = ((PyArrayObject *)values[7]);
+    __pyx_v_algorithm = values[8];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 7, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(1, 12, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("snapshot_lazy", 1, 9, 9, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(1, 12, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("propagation.InstantGNN.snapshot_lazy", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -2270,7 +2322,7 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_5snapshot_lazy(PyObject *__
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_array3), __pyx_ptype_5numpy_ndarray, 1, "array3", 0))) __PYX_ERR(1, 12, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_array4), __pyx_ptype_5numpy_ndarray, 1, "array4", 0))) __PYX_ERR(1, 12, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_array5), __pyx_ptype_5numpy_ndarray, 1, "array5", 0))) __PYX_ERR(1, 12, __pyx_L1_error)
-  __pyx_r = __pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(((struct __pyx_obj_11propagation_InstantGNN *)__pyx_v_self), __pyx_v_upfile, __pyx_v_rmax, __pyx_v_alpha, __pyx_v_array3, __pyx_v_array4, __pyx_v_array5, __pyx_v_algorithm);
+  __pyx_r = __pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(((struct __pyx_obj_11propagation_InstantGNN *)__pyx_v_self), __pyx_v_upfile, __pyx_v_rmax, __pyx_v_rbmax, __pyx_v_delta, __pyx_v_alpha, __pyx_v_array3, __pyx_v_array4, __pyx_v_array5, __pyx_v_algorithm);
 
   /* function exit code */
   goto __pyx_L0;
@@ -2281,7 +2333,7 @@ static PyObject *__pyx_pw_11propagation_10InstantGNN_5snapshot_lazy(PyObject *__
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_upfile, PyObject *__pyx_v_rmax, PyObject *__pyx_v_alpha, PyArrayObject *__pyx_v_array3, PyArrayObject *__pyx_v_array4, PyArrayObject *__pyx_v_array5, PyObject *__pyx_v_algorithm) {
+static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx_obj_11propagation_InstantGNN *__pyx_v_self, PyObject *__pyx_v_upfile, PyObject *__pyx_v_rmax, PyObject *__pyx_v_rbmax, PyObject *__pyx_v_delta, PyObject *__pyx_v_alpha, PyArrayObject *__pyx_v_array3, PyArrayObject *__pyx_v_array4, PyArrayObject *__pyx_v_array5, PyObject *__pyx_v_algorithm) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -2290,10 +2342,12 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx
   std::string __pyx_t_4;
   double __pyx_t_5;
   double __pyx_t_6;
-  eigency::Map<Eigen::MatrixXd>  __pyx_t_7;
-  eigency::Map<Eigen::MatrixXd>  __pyx_t_8;
+  double __pyx_t_7;
+  double __pyx_t_8;
   eigency::Map<Eigen::MatrixXd>  __pyx_t_9;
-  std::string __pyx_t_10;
+  eigency::Map<Eigen::MatrixXd>  __pyx_t_10;
+  eigency::Map<Eigen::MatrixXd>  __pyx_t_11;
+  std::string __pyx_t_12;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -2301,8 +2355,8 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx
 
   /* "propagation.pyx":13
  * 
- * 	def snapshot_lazy(self, upfile, rmax,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):
- * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())             # <<<<<<<<<<<<<<
+ * 	def snapshot_lazy(self, upfile, rmax,rbmax, delta,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):
+ * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, rbmax, delta, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())             # <<<<<<<<<<<<<<
  * 
  * 	def snapshot_operation(self, upfile, rmax,alpha, np.ndarray array3, algorithm):
  */
@@ -2327,21 +2381,23 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx
   __pyx_t_4 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = __pyx_PyFloat_AsDouble(__pyx_v_rmax); if (unlikely((__pyx_t_5 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
-  __pyx_t_6 = __pyx_PyFloat_AsDouble(__pyx_v_alpha); if (unlikely((__pyx_t_6 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
+  __pyx_t_6 = __pyx_PyFloat_AsDouble(__pyx_v_rbmax); if (unlikely((__pyx_t_6 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
+  __pyx_t_7 = __pyx_PyFloat_AsDouble(__pyx_v_delta); if (unlikely((__pyx_t_7 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
+  __pyx_t_8 = __pyx_PyFloat_AsDouble(__pyx_v_alpha); if (unlikely((__pyx_t_8 == (double)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
   try {
-    __pyx_t_7 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array3);
+    __pyx_t_9 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array3);
   } catch(...) {
     __Pyx_CppExn2PyErr();
     __PYX_ERR(1, 13, __pyx_L1_error)
   }
   try {
-    __pyx_t_8 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array4);
+    __pyx_t_10 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array4);
   } catch(...) {
     __Pyx_CppExn2PyErr();
     __PYX_ERR(1, 13, __pyx_L1_error)
   }
   try {
-    __pyx_t_9 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array5);
+    __pyx_t_11 = eigency::Map<Eigen::MatrixXd> (__pyx_v_array5);
   } catch(...) {
     __Pyx_CppExn2PyErr();
     __PYX_ERR(1, 13, __pyx_L1_error)
@@ -2363,10 +2419,10 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx
   if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 13, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_10 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
+  __pyx_t_12 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   try {
-    __pyx_v_self->c_instantgnn.snapshot_lazy(__pyx_t_4, __pyx_t_5, __pyx_t_6, __pyx_t_7, __pyx_t_8, __pyx_t_9, __pyx_t_10);
+    __pyx_v_self->c_instantgnn.snapshot_lazy(__pyx_t_4, __pyx_t_5, __pyx_t_6, __pyx_t_7, __pyx_t_8, __pyx_t_9, __pyx_t_10, __pyx_t_11, __pyx_t_12);
   } catch(...) {
     __Pyx_CppExn2PyErr();
     __PYX_ERR(1, 13, __pyx_L1_error)
@@ -2378,10 +2434,10 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx
   goto __pyx_L0;
 
   /* "propagation.pyx":12
- * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
+ * 		return self.c_instantgnn.initial_operation(path.encode(),dataset.encode(),m,n,rmax,rbmax, delta,alpha,epsilon,Map[MatrixXd](array3),algorithm.encode())
  * 
- * 	def snapshot_lazy(self, upfile, rmax,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):             # <<<<<<<<<<<<<<
- * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
+ * 	def snapshot_lazy(self, upfile, rmax,rbmax, delta,alpha, np.ndarray array3, np.ndarray array4, np.ndarray array5, algorithm):             # <<<<<<<<<<<<<<
+ * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, rbmax, delta, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
  * 
  */
 
@@ -2399,7 +2455,7 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_4snapshot_lazy(struct __pyx
 }
 
 /* "propagation.pyx":15
- * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
+ * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, rbmax, delta, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
  * 
  * 	def snapshot_operation(self, upfile, rmax,alpha, np.ndarray array3, algorithm):             # <<<<<<<<<<<<<<
  * 		return self.c_instantgnn.snapshot_operation(upfile.encode(), rmax, alpha, Map[MatrixXd](array3),algorithm.encode())
@@ -2584,7 +2640,7 @@ static PyObject *__pyx_pf_11propagation_10InstantGNN_6snapshot_operation(struct 
   goto __pyx_L0;
 
   /* "propagation.pyx":15
- * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
+ * 		return self.c_instantgnn.snapshot_lazy(upfile.encode(), rmax, rbmax, delta, alpha, Map[MatrixXd](array3),Map[MatrixXd](array4), Map[MatrixXd](array5), algorithm.encode())
  * 
  * 	def snapshot_operation(self, upfile, rmax,alpha, np.ndarray array3, algorithm):             # <<<<<<<<<<<<<<
  * 		return self.c_instantgnn.snapshot_operation(upfile.encode(), rmax, alpha, Map[MatrixXd](array3),algorithm.encode())
@@ -3962,6 +4018,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_array5, __pyx_k_array5, sizeof(__pyx_k_array5), 0, 0, 1, 1},
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
   {&__pyx_n_s_dataset, __pyx_k_dataset, sizeof(__pyx_k_dataset), 0, 0, 1, 1},
+  {&__pyx_n_s_delta, __pyx_k_delta, sizeof(__pyx_k_delta), 0, 0, 1, 1},
   {&__pyx_n_s_encode, __pyx_k_encode, sizeof(__pyx_k_encode), 0, 0, 1, 1},
   {&__pyx_n_s_epsilon, __pyx_k_epsilon, sizeof(__pyx_k_epsilon), 0, 0, 1, 1},
   {&__pyx_n_s_getstate, __pyx_k_getstate, sizeof(__pyx_k_getstate), 0, 0, 1, 1},
@@ -3973,6 +4030,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_numpy_core_multiarray_failed_to, __pyx_k_numpy_core_multiarray_failed_to, sizeof(__pyx_k_numpy_core_multiarray_failed_to), 0, 0, 1, 0},
   {&__pyx_kp_s_numpy_core_umath_failed_to_impor, __pyx_k_numpy_core_umath_failed_to_impor, sizeof(__pyx_k_numpy_core_umath_failed_to_impor), 0, 0, 1, 0},
   {&__pyx_n_s_path, __pyx_k_path, sizeof(__pyx_k_path), 0, 0, 1, 1},
+  {&__pyx_n_s_rbmax, __pyx_k_rbmax, sizeof(__pyx_k_rbmax), 0, 0, 1, 1},
   {&__pyx_n_s_reduce, __pyx_k_reduce, sizeof(__pyx_k_reduce), 0, 0, 1, 1},
   {&__pyx_n_s_reduce_cython, __pyx_k_reduce_cython, sizeof(__pyx_k_reduce_cython), 0, 0, 1, 1},
   {&__pyx_n_s_reduce_ex, __pyx_k_reduce_ex, sizeof(__pyx_k_reduce_ex), 0, 0, 1, 1},

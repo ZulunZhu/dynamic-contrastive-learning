@@ -53,11 +53,23 @@ bool err_cmp_neg(const pair<int,double> a,const pair<int,double> b){
 	return a.second < b.second;
 }
 //batch_lazy_update
-void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat,Eigen::Map<Eigen::MatrixXd> &feat_p, Eigen::Map<Eigen::MatrixXd> &change_node_list, string algorithm)
+void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double rbmax, double delta,double alphaa, Eigen::Map<Eigen::MatrixXd> &feat_t,Eigen::Map<Eigen::MatrixXd> &feat_p, Eigen::Map<Eigen::MatrixXd> &change_node_list, string algorithm)
 {
     alpha=alphaa;
     rmax=rmaxx;
-
+    bool dimension_flag = false;
+    Eigen::MatrixXd feat;
+    if(feat_t.cols()>feat_t.rows()){
+        cout<<" Fault with the feature dimension!"<<endl;
+        dimension_flag = true;
+        feat  = feat_t.transpose();
+        
+    }else{
+        feat  = feat_t;
+    }
+    
+    dimension=feat.cols();
+    cout<<"dimension: "<<dimension<<", col:"<<feat.rows()<<endl;
     vector<queue<uint>> candidate_sets(dimension);
     vector<vector<bool>> isCandidates(dimension, vector<bool>(vert, false));
 
@@ -94,7 +106,6 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
 
     double errorlimit=1.0/n;
     double epsrate=1;
-    config.rbmax = 1e-3;
     
     
     
@@ -207,8 +218,8 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
             // }
         }
 
-        double errbound_pos=rsum_pos*1e-3;
-        double errbound_neg=rsum_neg*1e-3;
+        double errbound_pos=rsum_pos*config.delta;
+        double errbound_neg=rsum_neg*config.delta;
         sort(error_pos_idx.begin(), error_pos_idx.end(), err_cmp_pos);
         sort(error_neg_idx.begin(), error_neg_idx.end(), err_cmp_neg);
         long rank = 0;
@@ -307,29 +318,32 @@ void Instantgnn::snapshot_lazy(string updatefilename, double rmaxx,double alphaa
     {
       cout<<"dims of feats that need push:"<<update_w.size()<<endl;
       if(algorithm == "instant"){
-        cout<<"before push feat(36,36):"<<feat(36,36)<<endl;
+        // cout<<"before push feat(36,36):"<<feat(36,36)<<endl;
         Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,true,algorithm,false);
-        cout<<"after push feat(36,36):"<<feat(36,36)<<endl;
+        // cout<<"after push feat(36,36):"<<feat(36,36)<<endl;
       }
       else if(algorithm == "speed_push"){
-        cout<<"before push feat(36,36):"<<feat(36,36)<<endl;
+        // cout<<"before push feat(36,36):"<<feat(36,36)<<endl;
         Instantgnn::ppr_push(update_w.size(), feat, false,candidate_sets,isCandidates,true,algorithm,false);
-        cout<<"after push feat(36,36):"<<feat(36,36)<<endl;
+        // cout<<"after push feat(36,36):"<<feat(36,36)<<endl;
         cout<<"speed push"<<endl;
       }
     }
-
+    if(dimension_flag == true){
+        feat_t  = feat.transpose();
+    }
+    
     // **************************Assign the positive sample****************//
-    for(uint i=0; i<changed_nodes.size(); i++)
-    {
-        uint changed_node = changed_nodes[i];
-        // MSG(change_node_list(changed_node,1));
-        for(int dim=0; dim<dimension; dim++)
-        {
-            feat_p(changed_node,dim) = feat(changed_node,dim);
-        }
+    // for(uint i=0; i<changed_nodes.size(); i++)
+    // {
+    //     uint changed_node = changed_nodes[i];
+    //     // MSG(change_node_list(changed_node,1));
+    //     for(int dim=0; dim<dimension; dim++)
+    //     {
+    //         feat_p(changed_node,dim) = feat(changed_node,dim);
+    //     }
         
-    }    
+    // }    
     
 
 }
@@ -453,21 +467,41 @@ void Instantgnn::snapshot_operation(string updatefilename, double rmaxx,double a
 int startsWith(string s, string sub){
         return s.find(sub)==0?1:0;
 }
-double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double alphaa,double epsilonn, Eigen::Map<Eigen::MatrixXd> &feat, string algorithm)
+double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn,double rmaxx,double rbmax, double delta,double alphaa,double epsilonn, Eigen::Map<Eigen::MatrixXd> &feat_t, string algorithm)
 {   
     // ppr.just_fortest();
     if(algorithm=="instant"){
-        X = feat; // change in feat not influence X
+        X = feat_t; // change in feat not influence X
     }
-    
+    bool dimension_flag = false;
     string filename = "./time.log";
     ofstream queryfile(filename, ios::app);
     queryfile<<"The dataset is = "<<dataset<<endl;
     queryfile.close();
+    config.rbmax = rbmax/log(nn);
+    config.delta = delta/nn;
+    
+    Eigen::MatrixXd feat;
+    if(feat_t.cols()>feat_t.rows()){
+        cout<<" Fault with the feature dimension!"<<endl;
+        dimension_flag = true;
+        feat  = feat_t.transpose();
+        
+    }else{
+        feat  = feat_t;
+    }
+    
+    dimension=feat.cols();
+    cout<<"dimension: "<<dimension<<", col:"<<feat.rows()<<endl;
+    
+    
+    // cout<<"C++ feat(357,37):"<<feat(357,37)<<endl;
+    // cout<<"C++ feat(37,357):"<<feat(37,357)<<endl;
+    // exit(0);
+
 
     dimension=feat.cols();
     cout<<"dimension: "<<dimension<<", col:"<<feat.rows()<<endl;
-
     dimension=min(feat.rows(),feat.cols());
     cout<<"dimension: "<<dimension<<", col:"<<max(feat.rows(),feat.cols())<<endl;
     
@@ -545,8 +579,12 @@ double Instantgnn::initial_operation(string path, string dataset,uint mm,uint nn
         // cout<<"after push feat(357,37):"<<feat(357,37)<<endl;
         // cout<<"speed push"<<endl;
     }
-  
+    
     double dataset_size=(double)(((long long)edges+vert)*4+(long long)vert*dimension*8)/1024.0/1024.0/1024.0;
+    if(dimension_flag == true){
+        feat_t  = feat.transpose();
+    }
+    
     return dataset_size;
 }
 
@@ -604,6 +642,8 @@ void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool i
     config.snap+=1;
     vector<vector<bool>>().swap(isCandidates);
     vector<queue<uint>>().swap(candidate_sets);
+
+
 }
 
 // void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, bool init,vector<queue<uint>>& candidate_sets,vector<vector<bool>>& isCandidates, string algorithm)
@@ -781,6 +821,7 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
         double rmax_n=rowsum_n*rmax;// to scale with the feature
         config.rbmax_p = config.rbmax;
         config.rbmax_n = -config.rbmax;
+        
         if(rmax_n == 0) rmax_n = -rowsum_p;  
         int iteration = 0;
 
@@ -868,7 +909,7 @@ void Instantgnn::ppr_residue(Eigen::Ref<Eigen::MatrixXd>feats,int st,int ed, boo
             //     R[w][i] = X(i, w);
             //     feats(i, w) = 0;
             // }
-            for(uint k = 0;k<4;k++){
+            for(uint k = 0;k<8;k++){
                 if(init){
                     for(uint i=0; i<vert; i++)
                     {   

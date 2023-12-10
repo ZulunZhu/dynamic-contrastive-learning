@@ -123,6 +123,7 @@ public:
         size_t rtn = fread(indptr.data(), sizeof indptr[0], indptr.size(), f2);
         if(rtn!=n+1)
             cout<<"Error! "<<dataset_pl<<" Incorrect read!"<<endl;
+            cout<<" rtn: "<<rtn<<" n:"<<n<<endl;
         fclose(f2);
     }
     else
@@ -729,7 +730,7 @@ public:
     string prefix = "d:\\dropbox\\research\\data\\";
 
     string version = "vector";
-
+    int snap = 0;
     bool multithread = false;
     bool with_rw_idx = false;
 	bool with_baton = false;
@@ -748,7 +749,8 @@ public:
 
     double omega; // 1/omega  omega = # of random walk
     double rmax; // identical to r_max
-
+    double rbmax;
+    double delta;
 
     double lambda_q = 30; //ratio of query
     double lambda_u = 200; //ratio of update
@@ -772,14 +774,13 @@ public:
     double pfail = 0;
     double dbar = 0;
     double epsilon = 0.5;
-    double delta = 0;
 	double beta = 1.0;
 	double sigma = 0.5;
     double errorlimiter = 1.0;
     double insert_ratio = 1.0;
 	double rbmax_p = 1e-5;
     double rbmax_n = -1e-5;
-    double rbmax;
+    
     double theta;
 	double n = 2.0;
     int nodes, edges;

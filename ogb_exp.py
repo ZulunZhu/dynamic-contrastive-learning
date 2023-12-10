@@ -24,6 +24,7 @@ import sys
 from sys import getsizeof
 import pynvml
 import resource
+from sklearn.metrics import average_precision_score, roc_auc_score
 from openTSNE import TSNE
 import matplotlib.pyplot as plt
 def show_gpu():
@@ -69,7 +70,9 @@ def main():
     # Algorithm parameters
     parser.add_argument('--alpha', type=float, default=0.2, help='alpha.')
     parser.add_argument('--rmax', type=float, default=1e-7, help='threshold.')
-    
+    parser.add_argument('--rbmax', type=float, default=1, help='reverse push threshold.')
+    parser.add_argument('--delta', type=float, default=1, help='positive sample threshold.')
+
     parser.add_argument('--epsilon', type=float, default=8, help='epsilon.')
     parser.add_argument("--n-ggd-epochs", type=int, default=1,
                         help="number of training epochs")
@@ -88,7 +91,7 @@ def main():
     parser.add_argument('--bias', default='none', help='bias.')
     parser.add_argument("--proj_layers", type=int, default=1, help="number of project linear layers")
     parser.add_argument('--epochs', type=int, default= 200, help='number of epochs.')
-    parser.add_argument('--batch', type=int, default=10000, help='batch size.')
+    parser.add_argument('--batch', type=int, default=2048, help='batch size.')
     parser.add_argument("--patience", type=int, default=50, help="early stop patience condition")
     parser.add_argument('--dev', type=int, default=0, help='device id.')
     args = parser.parse_args()
@@ -105,26 +108,31 @@ def main():
     checkpt_file = 'pretrained/'+uuid.uuid4().hex+'.pt'
 
     
-    n,m,features,features_n,train_labels,val_labels,test_labels,train_idx,val_idx,test_idx,memory_dataset, py_alg = load_ogb_init(args.dataset, args.alpha,args.rmax, args.epsilon, args.alg) ##
-    print("features::",features)
-    
+    n,m,features,features_n,train_labels,val_labels,test_labels,labels,train_idx,val_idx,test_idx,memory_dataset, py_alg = load_ogb_init(args.dataset, args.alpha,args.rmax, args.rbmax,args.delta,args.epsilon, args.alg) ##
+    print("features::",features[1:20])
+    print("train_labels",torch.sum(train_labels))
     features_p = features
     print('------------------ Initial -------------------')
-    # print("train_idx:",train_idx.size())
-    # print("val_idx:",val_idx.size())
-    # print("test_idx:",test_idx.size())
-
-    prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
+    print("train_idx:",train_idx.size())
+    print("val_idx:",val_idx.size())
+    print("test_idx:",test_idx.size())
+    macros = []
+    micros = [] 
+    pretrain_times = []
+    macro_init, micro_init, pretrain_time_init = prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels,args, checkpt_file)
+    macros.append(macro_init)
+    micros.append(micro_init)
+    pretrain_times.append(pretrain_time_init)
 
     print('------------------ update -------------------')
     snapList = [f for f in glob('../data/'+args.dataset+'/*Edgeupdate_snap*.txt')]
     print('number of snapshots: ', len(snapList))
-    # print("features[36][36]::",features[36][36])
+    # print("features[2][3]::",features[2][3])
     for i in range(len(snapList)):
         change_node_list = np.zeros([n]) 
         features_copy = copy.deepcopy(features)
         # print("change_node_list",np.sum(change_node_list))
-        py_alg.snapshot_lazy('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_snap'+str(i+1)+'.txt', args.rmax, args.alpha, features, features_p, change_node_list, args.alg)
+        py_alg.snapshot_lazy('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_snap'+str(i+1)+'.txt', args.rmax, args.rbmax,args.delta, args.alpha, features, features_p, change_node_list, args.alg)
         print("number of changed node", np.sum(change_node_list))
         # print("features_ori:",features)
         change_node_list = change_node_list.astype(bool)
@@ -133,24 +141,38 @@ def main():
         features_n = features_copy[change_node_list]
         print("feature_p.size:",features_p.shape)
         print("feature_n.size:",features_n.shape)
-        if(i>=11):
-            prepare_to_train(i+1,features, features_p, features_n, m,train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file)
-        
+
+        if(i == 16):
+            macro, micro, pretrain_time = prepare_to_train(i+1,features, features_p, features_n, m,train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels, args, checkpt_file)
+            macros.append(macro)
+            micros.append(micro)
+            pretrain_times.append(pretrain_time)
+        # with open('./log/sensitivity.txt', 'a') as f:
+        #     print('Dataset:'+args.dataset+f"metric_micro:{100*np.mean( micros):.2f}%  "+f" hidden: {args.hidden:.1f}"+f" epochs: {args.n_ggd_epochs:.1f}",file=f)
+        # exit(0)
         del features_copy
         gc.collect()
+    print("Mean Macro: ", np.mean( macros), " Mean Micro: ", np.mean( micros), "Mean training time: ", np.mean(pretrain_times))
+    with open('./log/sensitivity.txt', 'a') as f:
+        print('Dataset:'+args.dataset+f"metric_micro:{100*np.mean( micros):.2f}%  "+f" hidden: {args.hidden:.1f}"+f" epochs: {args.n_ggd_epochs:.1f}",file=f)
 
 def train(model, device, train_loader, optimizer):
     model.train()
 
     time_epoch=0
     loss_list=[]
-
+    loss_fun = nn.BCEWithLogitsLoss()
     for step, (x, y) in enumerate(train_loader):
         t_st=time.time()
         x, y = x.cuda(), y.cuda()
         optimizer.zero_grad()
         out = model(x)
         loss = F.nll_loss(out, y.squeeze(1))
+        # print("out", out.sigmoid())
+        # print("y.squeeze(1)", y.to(torch.float))
+        # if(torch.sum(y)>0):
+        #     print("torch.sum(y)>0!!")
+        # loss = loss_fun(out.sigmoid(), y.to(torch.float))
         loss.backward()
         optimizer.step()
         time_epoch+=(time.time()-t_st)
@@ -186,10 +208,12 @@ def test(model, device, loader, evaluator,checkpt_file):
         y_true.append(y)
     metric_macro = metrics.f1_score(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0), average='macro')
     metric_micro = metrics.f1_score(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0), average='micro')
+    roc = roc_auc_score(torch.cat(y_true, dim=0),torch.cat(y_pred, dim=0))
+   
     return evaluator.eval({
         "y_true": torch.cat(y_true, dim=0),
         "y_pred": torch.cat(y_pred, dim=0),
-    })['acc'], metric_macro, metric_micro
+    })['acc'], metric_macro, metric_micro, roc
 
 def aug_feature_dropout(input_feat, drop_percent=0.2):
     # aug_input_feat = copy.deepcopy((input_feat.squeeze(0)))
@@ -210,7 +234,7 @@ def evaluate(model, features, labels, mask):
         correct = torch.sum(indices == labels)
         return correct.item() * 1.0 / len(labels)
 
-def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, args, checkpt_file):
+def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, ori_all_labels,args, checkpt_file):
     features_ori = torch.FloatTensor(features_ori)
     features_n = torch.FloatTensor(features_n)
     features_p = torch.FloatTensor(features_p)
@@ -234,6 +258,7 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
 
     label_dim = int(max(train_labels.max(),val_labels.max(),test_labels.max()))+1
     labels = torch.cat((train_labels, val_labels,test_labels)).squeeze(1).cuda()
+    ori_all_labels = ori_all_labels.squeeze(1).cuda()
     print("labels:",labels.size())
     
     
@@ -260,11 +285,24 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
         print("all_labels[train_idx]", all_labels[train_idx])
         all_dataset_ori = ExtendDataset(features_ori,all_labels)
         all_loader_ori = DataLoader(all_dataset_ori, batch_size=args.batch,shuffle=False)
+    elif(args.dataset in ["mooc", "wikipedia", "reddit"]):
+        print("train_idx.size()", train_idx.size())
+        # all_size = torch.cat((train_idx,val_idx,test_idx),dim=0)
+        # features_ori =  features_ori[all_size]
+        # print("features_ori[train_idx]", features_ori[train_idx].shape)
+        train_idx = train_idx>0
+        val_idx = val_idx>0
+        test_idx = test_idx>0
+        # print("features_ori[train_idx]", features_ori[train_idx].shape)
+        # label_dim = int(max(train_labels.max(),val_labels.max(),test_labels.max()))
+        all_dataset_ori = ExtendDataset(features_ori,ori_all_labels)
+        all_loader_ori = DataLoader(all_dataset_ori, batch_size=args.batch,shuffle=False)
     else:
         all_dataset_ori = ExtendDataset(features_ori,labels)
         all_loader_ori = DataLoader(all_dataset_ori, batch_size=args.batch,shuffle=False)
     
-
+    print("features_ori.shape:", features_ori.shape)
+    print("ori_all_labels.shape",ori_all_labels.shape)
     # all_dataset = SimpleDataset(features,features_n,fake_labels)
     # all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=False)
     
@@ -306,19 +344,20 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     time_forward=0
     tag = str(int(np.random.random() * 10000000000))
     t_start = time.time()
+    time_epoch=0
     for epoch in range(args.n_ggd_epochs):
         model.train()
         t0 = time.time()
-
+        
         for step, (x,y) in enumerate(all_loader):
             model_optimizer.zero_grad()
             # aug_feat = aug_feature_dropout(x, args.drop_feat)
             t_st=time.time()
             loss = model(x.cuda(), y.cuda(), b_xent)
-            time_forward+=(time.time()-t_st)
             # print("time_forward",time_forward)
             loss.backward()
             model_optimizer.step()
+            time_epoch+=(time.time()-t_st)
 
         if loss < best:
             best = loss
@@ -339,11 +378,14 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
                                             m / np.mean(dur) / 1000))
 
         counts += 1
-    print("pretraining time:", time.time()-t_start)
+    pretrain_time = time_epoch
+    print("pretraining time:", pretrain_time)
     del features_n
     gc.collect()
     print('Training Completed.')
-    
+
+    # return 1,2,3
+
     # create classifier model
     # classifier = Classifier(args.hidden, label_dim)
 
@@ -365,10 +407,12 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     model.load_state_dict(torch.load('pkl/best_ggd' + tag + '.pkl'))
     model.eval()
     embeds_list = []
+
     #graph power embedding reinforcement
     for step, (x, y) in enumerate(all_loader_ori):
         if use_cl:
             embed = model.embed(x.cuda())
+
         else:
             embed = x.cuda()
 
@@ -413,6 +457,10 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     else:
         classifier = ClassMLP(feature_dim,args.hidden,label_dim,args.layer,args.dropout).cuda()
     ### Instant original method
+    
+    print("train_labels.shape", torch.sum(train_labels))
+    print("train_labels.shape", torch.sum(val_labels))
+    print("train_labels.shape", torch.sum(test_labels))
     train_dataset = ExtendDataset(embeds[train_idx],train_labels)
     valid_dataset = ExtendDataset(embeds[val_idx],val_labels)
     test_dataset = ExtendDataset(embeds[test_idx],test_labels)
@@ -457,18 +505,19 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
             break
 
     memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    test_acc, metric_macro, metric_micro = test(classifier, args.dev, test_loader, evaluator,checkpt_file)
+    test_acc, metric_macro, metric_micro, roc = test(classifier, args.dev, test_loader, evaluator,checkpt_file)
     print(f"Train cost: {train_time:.2f}s")
     print('Load {}th epoch'.format(best_epoch))
     print(f"Test accuracy:{100*test_acc:.2f}%")
     print(f"metric_macro:{100*metric_macro:.2f}%")
     print(f"metric_micro:{100*metric_micro:.2f}%")
+    print(f"ROC:{100*roc:.2f}%")
     print(f"Memory: {memory / 2**20:.3f}GB")
     with open('accuracy_and_memory.txt', 'a') as f:
         print('Dataset:'+args.dataset+" Use gcl?"+str(use_cl), file=f)
         print(f"snapshot:{snapshot:.2f}  "+f"metric_macro:{100*metric_macro:.2f}%  "+f"metric_micro:{100*metric_micro:.2f}%  "+f"Memory: {memory / 2**20:.3f}GB",file=f)
         
-
+    return metric_macro, metric_micro, pretrain_time
     # dur = []
     # best_acc, best_val_acc = 0, 0
     # print('Testing Phase ==== Please Wait.')
