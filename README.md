@@ -1,4 +1,4 @@
-# Instant Graph Neural Networks for Dynamic Graphs
+# Topology-aware Graph Contrastive Learning on Dynamic Graphs
 
 ## Requirements
 - CUDA 10.1
