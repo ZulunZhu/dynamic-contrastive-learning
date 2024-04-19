@@ -20,4 +20,4 @@ pretrained/*
 *.log
 *.txt
 *.out
-temp
+tmp
