@@ -31,7 +31,7 @@ namespace propagation{
         
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-        int NUMTHREAD=40;//Number of threads
+        int NUMTHREAD=60;//Number of threads
         uint edges, vert;
         Graph g;
         Eigen::MatrixXd X;

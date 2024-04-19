@@ -22,11 +22,15 @@ import copy
 import os
 import sys
 from sys import getsizeof
+import update_grad
 import pynvml
 import resource
 from sklearn.metrics import average_precision_score, roc_auc_score
 from openTSNE import TSNE
 import matplotlib.pyplot as plt
+from pathlib import Path
+import pandas as pd
+from varname import nameof
 def show_gpu():
     pynvml.nvmlInit()
     handle = pynvml.nvmlDeviceGetHandleByIndex(0) # 0表示显卡标号
@@ -34,6 +38,35 @@ def show_gpu():
     print("GPU overall::",meminfo.total/1024**3, "GB") #总的显存大小
     print("GPU allocated::",meminfo.used/1024**3, "GB")  #已用显存大小
     print("GPU left::",meminfo.free/1024**3, "GB")  #剩余显存大小
+def var_info(var):
+    return print(f"{nameof(var)}: {var}")
+
+def update_results_csv(result_path, model_name, dataset_name, new_result):
+    # Load the existing CSV file into a DataFrame or create a new one if it doesn't exist
+    try:
+        df = pd.read_csv(result_path, index_col=0)
+    except FileNotFoundError:
+        # If the file does not exist, create an empty DataFrame with model_name as the index
+        df = pd.DataFrame(columns=[dataset_name])
+        df.index.name = 'Model'
+
+    # Check if the dataset_name column exists, if not, add it
+    if dataset_name not in df.columns:
+        df[dataset_name] = pd.NA  # Initialize the column with NA values
+
+    # Ensure the model_name row exists
+    if model_name not in df.index:
+        # If the model doesn't exist, append a new row with NA values
+        new_row = pd.DataFrame(index=[model_name], columns=df.columns)
+        df = pd.concat([df, new_row])
+
+    # Update the specific entry with the new result
+    df.at[model_name, dataset_name] = new_result
+
+    # Save the updated DataFrame back to CSV
+    df.to_csv(result_path)
+
+    print(f"Updated CSV file at {result_path} with new results for model '{model_name}' and dataset '{dataset_name}'.")
 
 def tsne_plt(embeddings, labels, save_path=None, title='Title'):
     print('Drawing t-SNE plot ...')
@@ -90,7 +123,7 @@ def main():
     parser.add_argument('--dropout', type=float, default=0, help='dropout rate.')
     parser.add_argument('--bias', default='none', help='bias.')
     parser.add_argument("--proj_layers", type=int, default=1, help="number of project linear layers")
-    parser.add_argument('--epochs', type=int, default= 200, help='number of epochs.')
+    parser.add_argument('--epochs', type=int, default= 100, help='number of epochs.')
     parser.add_argument('--batch', type=int, default=2048, help='batch size.')
     parser.add_argument("--patience", type=int, default=50, help="early stop patience condition")
     parser.add_argument('--dev', type=int, default=0, help='device id.')
@@ -119,20 +152,21 @@ def main():
     macros = []
     micros = [] 
     pretrain_times = []
-    macro_init, micro_init, pretrain_time_init = prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels,args, checkpt_file)
-    macros.append(macro_init)
-    micros.append(micro_init)
-    pretrain_times.append(pretrain_time_init)
+    # macro_init, micro_init, pretrain_time_init = prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels,args, checkpt_file)
+    # macros.append(macro_init)
+    # micros.append(micro_init)
+    # pretrain_times.append(pretrain_time_init)
+    arxiv_table_path = Path('../mag_accuracy_table.csv')
 
     print('------------------ update -------------------')
-    snapList = [f for f in glob('../data/'+args.dataset+'/*Edgeupdate_snap*.txt')]
+    snapList = [f for f in glob('../data/'+args.dataset+'/*Edgeupdate_32snap*.txt')]
     print('number of snapshots: ', len(snapList))
     # print("features[2][3]::",features[2][3])
     for i in range(len(snapList)):
         change_node_list = np.zeros([n]) 
         features_copy = copy.deepcopy(features)
         # print("change_node_list",np.sum(change_node_list))
-        py_alg.snapshot_lazy('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_snap'+str(i+1)+'.txt', args.rmax, args.rbmax,args.delta, args.alpha, features, features_p, change_node_list, args.alg)
+        py_alg.snapshot_lazy('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_32snap'+str(i+1)+'.txt', args.rmax, args.rbmax,args.delta, args.alpha, features, features_p, change_node_list, args.alg)
         print("number of changed node", np.sum(change_node_list))
         # print("features_ori:",features)
         change_node_list = change_node_list.astype(bool)
@@ -142,19 +176,23 @@ def main():
         print("feature_p.size:",features_p.shape)
         print("feature_n.size:",features_n.shape)
 
-        if(i == 16):
-            macro, micro, pretrain_time = prepare_to_train(i+1,features, features_p, features_n, m,train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels, args, checkpt_file)
-            macros.append(macro)
-            micros.append(micro)
-            pretrain_times.append(pretrain_time)
+        # # if(i == 1):
+        macro, micro, pretrain_time = prepare_to_train(i+1,features, features_p, features_n, m,train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels, args, checkpt_file, change_node_list)
+        macros.append(macro)
+        micros.append(micro)
+        pretrain_times.append(pretrain_time)
+        # # update_results_csv(arxiv_table_path, "negative samples", str(args.delta), features_n.shape[0])
+        # update_results_csv(arxiv_table_path, "accuracy", i, micro)
+        
+
         # with open('./log/sensitivity.txt', 'a') as f:
         #     print('Dataset:'+args.dataset+f"metric_micro:{100*np.mean( micros):.2f}%  "+f" hidden: {args.hidden:.1f}"+f" epochs: {args.n_ggd_epochs:.1f}",file=f)
         # exit(0)
         del features_copy
         gc.collect()
     print("Mean Macro: ", np.mean( macros), " Mean Micro: ", np.mean( micros), "Mean training time: ", np.mean(pretrain_times))
-    with open('./log/sensitivity.txt', 'a') as f:
-        print('Dataset:'+args.dataset+f"metric_micro:{100*np.mean( micros):.2f}%  "+f" hidden: {args.hidden:.1f}"+f" epochs: {args.n_ggd_epochs:.1f}",file=f)
+    # with open('./log/sensitivity.txt', 'a') as f:
+    #     print('Dataset:'+args.dataset+f"metric_micro:{100*np.mean( micros):.2f}%  "+f" hidden: {args.hidden:.1f}"+f" epochs: {args.n_ggd_epochs:.1f}",file=f)
 
 def train(model, device, train_loader, optimizer):
     model.train()
@@ -208,8 +246,9 @@ def test(model, device, loader, evaluator,checkpt_file):
         y_true.append(y)
     metric_macro = metrics.f1_score(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0), average='macro')
     metric_micro = metrics.f1_score(torch.cat(y_true, dim=0), torch.cat(y_pred, dim=0), average='micro')
-    roc = roc_auc_score(torch.cat(y_true, dim=0),torch.cat(y_pred, dim=0))
-   
+    # For mooc and reddit datasets
+    # roc = roc_auc_score(torch.cat(y_true, dim=0),torch.cat(y_pred, dim=0))
+    roc = 0
     return evaluator.eval({
         "y_true": torch.cat(y_true, dim=0),
         "y_pred": torch.cat(y_pred, dim=0),
@@ -234,7 +273,7 @@ def evaluate(model, features, labels, mask):
         correct = torch.sum(indices == labels)
         return correct.item() * 1.0 / len(labels)
 
-def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, ori_all_labels,args, checkpt_file):
+def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, ori_all_labels,args, checkpt_file, change_node_list):
     features_ori = torch.FloatTensor(features_ori)
     features_n = torch.FloatTensor(features_n)
     features_p = torch.FloatTensor(features_p)
@@ -334,7 +373,7 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     model_optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     b_xent = nn.BCEWithLogitsLoss()
-
+    
     # train deep graph infomax
     cnt_wait = 0
     best = 1e9
@@ -457,20 +496,25 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     else:
         classifier = ClassMLP(feature_dim,args.hidden,label_dim,args.layer,args.dropout).cuda()
     ### Instant original method
-    
+    sub_train = np.where(~change_node_list)[0]
     print("train_labels.shape", torch.sum(train_labels))
     print("train_labels.shape", torch.sum(val_labels))
     print("train_labels.shape", torch.sum(test_labels))
     train_dataset = ExtendDataset(embeds[train_idx],train_labels)
     valid_dataset = ExtendDataset(embeds[val_idx],val_labels)
     test_dataset = ExtendDataset(embeds[test_idx],test_labels)
+    mini_train_dataset = ExtendDataset(embeds[sub_train],train_labels)
 
+    var_info(train_idx)
+    var_info(sub_train)
+    
     # all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=False)
     train_loader = DataLoader(train_dataset, batch_size=args.batch,shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=128, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
-
+    mini_train_loader = DataLoader(mini_train_dataset, batch_size=args.batch,shuffle=True)
     
+    print(classifier)
     
     evaluator = Evaluator(name='ogbn-papers100M')
     classifier_optimizer = optim.Adam(classifier.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -479,8 +523,34 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     best = 0
     best_epoch = 0
     train_time = 0
+    checkpt_file = 'pretrained/'+'snapshot'+str(snapshot)+'.pt'
+    grad_checkpt_file = 'pretrained/'+'grad_snapshot'+str(snapshot)+'.pt'
+
+    # #Initialize the model with the random parameters    
+    # classifier.reset_parameters()
+
+    #Initialize the last snapshot for initialization
+    if snapshot > 0:
+        checkpt_file_for_initial = 'pretrained/'+'snapshot'+str(snapshot-1)+'.pt'
+        grad_checkpt_file_for_initial = 'pretrained/'+'grad_snapshot'+str(snapshot-1)+'.pt'
+        print("Load the last snapshot for initialization:"+checkpt_file_for_initial)
+        classifier.load_state_dict(torch.load(checkpt_file_for_initial))
+        loaded_gradients = torch.load(grad_checkpt_file_for_initial)
+    #    for param in classifier.parameters():
+    #     print(param)
+    #    print("loaded_gradients", loaded_gradients)
+        # for n, p in loaded_gradients.items():
+        #     print("loaded_gradients", p)
+
+        ref_grad_vec = update_grad.grad_to_vector(loaded_gradients)
+        train_loader = mini_train_loader
     
-    classifier.reset_parameters()
+
+    
+    # print("current_grad_vec.shape", current_grad_vec)
+    # Printing parameter values without their names
+    
+    
     print("--------------------------")
     print("Training...")
     for epoch in range(args.epochs):
@@ -498,11 +568,32 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
             best_epoch = epoch+1
             t_st=time.time()
             torch.save(classifier.state_dict(), checkpt_file)
+
+            # Example: save gradients as a torch file
+            gradients = {}
+            for name, parameter in classifier.named_parameters():
+                gradients[name] = parameter.grad.clone()  # Use `.clone()` to save a copy of the gradient tensor
+            torch.save(gradients, grad_checkpt_file)
+
             bad_counter = 0
         else:
             bad_counter += 1
         if bad_counter == args.patience:
             break
+    
+    # For incremental model test, to test whether the model of last moment can be used in the next moment (seems no)
+    # if snapshot > 0:
+    #    checkpt_file = 'pretrained/'+'snapshot'+str(snapshot-1)+'.pt'
+    #    print("*****************************"+checkpt_file)
+    if snapshot>0:
+        loaded_gradients = torch.load(grad_checkpt_file)
+    #    for param in classifier.parameters():
+    #     print(param)
+    #    print("loaded_gradients", loaded_gradients)
+        for n, p in loaded_gradients.items():
+            print("loaded_gradients", p)
+        current_grad_vec = update_grad.grad_to_vector(loaded_gradients)
+        var_info(current_grad_vec)
 
     memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     test_acc, metric_macro, metric_micro, roc = test(classifier, args.dev, test_loader, evaluator,checkpt_file)

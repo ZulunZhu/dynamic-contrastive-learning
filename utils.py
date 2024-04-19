@@ -50,7 +50,7 @@ def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     elif(datastr=="arxiv"):
         # m=427696; n=169343
         m=597039; n=169343 ##with self_loop
-        # m=2315598; n=169343 ## full edge
+        # m=2484941; n=169343 ## full edge
     elif(datastr=="products"):
         m=69634445; n=2449029##with self_loop
         # m=67185416; n=2449029
@@ -60,7 +60,8 @@ def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     elif(datastr=="tmall"):
         m=5871256; n=577314##with self_loop
     elif(datastr=="mag"):
-        m=1158475; n= 736389##with self_loop    
+        # m=1158475; n= 736389##with self_loop
+        m=11529061; n= 736389## full edges     
     elif(datastr=="mooc"):
         m=768635; n= 411749 ##with self_loop
     elif(datastr=="wikipedia"):
@@ -90,8 +91,8 @@ def load_ogb_init(datastr, alpha, rmax, rbmax, delta,epsilon, algorithm):
     features = np.ascontiguousarray(features)
     print("features.shape",features.shape)
     print("type(features):", type(features),features.dtype)
-    # print("python features[357[37]",features[357][37])
-    memory_dataset = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_full', m, n, rmax, rbmax, delta, alpha, epsilon,features, algorithm)
+    print("python features[357[37]",features[357][37])
+    memory_dataset = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, rbmax, delta, alpha, epsilon,features, algorithm)
     # memory_dataset_n = py_alg.initial_operation('../data/'+datastr+'/', datastr+'_init', m, n, rmax, alpha, epsilon,features_n, algorithm)
     # scaler = sklearn.preprocessing.StandardScaler()
     # scaler.fit(features)

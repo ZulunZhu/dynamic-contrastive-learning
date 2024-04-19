@@ -84,7 +84,7 @@ def arxiv():
     print("feat", feat)
     print("feat.shape:", feat.shape)
     print("type(features):", type(feat),feat.dtype)
-    exit(0)
+    # exit(0)
     # np.save(root_folder+'/data/arxiv/arxiv_feat.npy',feat)
     
     #get labels
@@ -136,6 +136,8 @@ def arxiv():
         #             f.write("%d %d\n" % (j, i))
         #             edge_number+=1
     print("full edge_number", edge_number)
+    save_adj(row_ful, col_ful, N=data.num_nodes, dataset_name='arxiv', savename='arxiv_full', snap='init')
+    
 
     data.edge_index, drop_edge_index, _ = dropout_adj(data.edge_index,train_idx, num_nodes= data.num_nodes)
     data.edge_index=to_undirected(edge_index = data.edge_index,num_nodes = data.num_nodes)
@@ -173,8 +175,18 @@ def arxiv():
     save_adj(row, col, N=data.num_nodes, dataset_name='arxiv', savename='arxiv_init', snap='init')
     num_snap = 16
     snapshot = math.floor(row_drop.shape[0] / num_snap)
-    print('num_snap: ', num_snap)
+    
 
+    #Shuffle the removed edges and show a more flexible setting
+    # Generate shuffled indices
+    indices = np.random.permutation(len(row_drop))
+    # Shuffle both arrays using the same indices
+    row_drop = row_drop[indices]
+    col_drop = col_drop[indices]
+
+    print('num_snap: ', row_drop)
+
+    
     for sn in range(num_snap):
         print(sn)
         row_sn = row_drop[ sn*snapshot : (sn+1)*snapshot ]
@@ -190,9 +202,9 @@ def arxiv():
         if (sn+1) % 20 ==0 or (sn+1)==num_snap:
             save_adj(row_tmp, col_tmp, N=data.num_nodes, dataset_name='arxiv', savename='arxiv_snap'+str(sn+1), snap=(sn+1)) 
         
-        torch.save([row_sn, col_sn], root_folder+'/data/arxiv_python/arxiv_Edgeupdate_snap' + str(sn+1) + '.pt')
+        # torch.save([row_sn, col_sn], root_folder+'/data/arxiv_python/arxiv_Edgeupdate_snap' + str(sn+1) + '.pt')
 
-        with open(root_folder+'/data/arxiv/arxiv_Edgeupdate_snap' + str(sn+1) + '.txt', 'w') as f:
+        with open(root_folder+'/data/arxiv/arxiv_Edgeupdate_snap' + str(sn+1+32) + '.txt', 'w') as f:
             if(self_loop):
                 for i, j in zip(row_sn, col_sn):
                     f.write("%d %d\n" % (i, j))
@@ -208,8 +220,9 @@ def arxiv():
 
 
 def products():
-    # dataset=PygNodePropPredDataset(name='ogbn-products',root="../data/")
-    dataset=PygNodePropPredDataset(name='ogbn-products')
+    dataset=PygNodePropPredDataset(name='ogbn-products',root="../dataset/")
+    # dataset=PygNodePropPredDataset(name='ogbn-products',root ="/Resource/dataset/OGB")
+    # dataset=PygNodePropPredDataset(name='ogbn-products')
     data = dataset[0]
     split_idx = dataset.get_idx_split()
     train_idx, val_idx, test_idx = split_idx['train'], split_idx['valid'], split_idx['test']
@@ -221,7 +234,8 @@ def products():
     scaler = sklearn.preprocessing.StandardScaler()
     scaler.fit(feat)
     feat = scaler.transform(feat)
-    np.save(root_folder+'/data/products/products_feat.npy',feat)
+    print(feat)
+    # np.save(root_folder+'/data/products/products_feat.npy',feat)
 
     #get labels
     print("save labels.....")
@@ -251,7 +265,7 @@ def products():
     test_labels=test_labels.reshape(test_labels.shape[1])
     # np.savez(root_folder+'/data/products/products_labels.npz',train_idx=train_idx,val_idx=val_idx,test_idx=test_idx,train_labels=train_labels,val_labels=val_labels,test_labels=test_labels)
     
-    data.edge_index = to_undirected(data.edge_index, data.num_nodes)
+    data.edge_index=to_undirected(edge_index = data.edge_index,num_nodes = data.num_nodes)
 
     row_ful,col_ful=data.edge_index
     row_ful=row_ful.numpy()
@@ -296,14 +310,14 @@ def products():
 
 
     save_adj(row, col, N=data.num_nodes, dataset_name='products', savename='products_init', snap='init')
-    num_snap = 15
+    num_snap = 32
     snapshot = math.floor(row_drop.shape[0] / num_snap)
     print('num_snap: ', num_snap)
 
     for sn in range(num_snap):
         print(sn)
-        row_sn = row_drop[ sn*snapshot : (sn+1)*snapshot ]
-        col_sn = col_drop[ sn*snapshot : (sn+1)*snapshot ]
+        row_sn = row_drop[ 0*snapshot : (sn+1)*snapshot ]
+        col_sn = col_drop[ 0*snapshot : (sn+1)*snapshot ]
         if sn == 0:
             row_tmp=row
             col_tmp=col
@@ -313,9 +327,9 @@ def products():
         row_tmp=np.concatenate((row_tmp,col_sn))
         col_tmp=np.concatenate((col_tmp,row_sn))
         
-        save_adj(row_tmp, col_tmp, N=data.num_nodes, dataset_name='products', savename='products_snap'+str(sn+1), snap=(sn+1))
+        save_adj(row_tmp, col_tmp, N=data.num_nodes, dataset_name='products', savename='products_cumusnap'+str(sn+1), snap=(sn+1))
         
-        with open(root_folder+'/data/products/products_Edgeupdate_snap' + str(sn+1) + '.txt', 'w') as f:
+        with open(root_folder+'/data/products/products_Edgeupdate_cumusnap' + str(sn+1) + '.txt', 'w') as f:
             for i, j in zip(row_sn, col_sn):
                 f.write("%d %d\n" % (i, j))
                 f.write("%d %d\n" % (j, i))
@@ -1182,7 +1196,8 @@ def reddit():
 
 def mag():
     print('start processing data: ')
-    dataset=PygNodePropPredDataset(name='ogbn-mag')
+    # dataset=PygNodePropPredDataset(name='ogbn-mag')
+    dataset=PygNodePropPredDataset(name='ogbn-mag',root ="/Resource/dataset/OGB")
     data = dataset[0]
     split_idx = dataset.get_idx_split()
     train_idx, val_idx, test_idx = split_idx['train']['paper'], split_idx['valid']['paper'], split_idx['test']['paper']
@@ -1225,8 +1240,30 @@ def mag():
     
     edge_index=data.edge_index_dict[("paper", "cites", "paper")]
     print("before undirect edge_index.shape:", edge_index.shape)
-    edge_index = to_undirected(edge_index, data.num_nodes_dict["paper"])
+    data.edge_index = to_undirected(edge_index, data.num_nodes_dict["paper"])
     print("after undirect edge_index.shape:", edge_index.shape)
+
+
+    row_ful,col_ful=data.edge_index
+    row_ful=row_ful.numpy()
+    col_ful=col_ful.numpy()
+    edge_number = 0
+    with open(root_folder+'/data/mag/mag_full_adj' + '.txt', 'w') as f:
+        # if(self_loop):
+        for i, j in zip(row_ful, col_ful):
+            f.write("%d %d\n" % (i, j))
+            f.write("%d %d\n" % (j, i))
+            edge_number+=1
+        # else:
+        #     for i, j in zip(row_ful, col_ful):
+        #         if(i != j):
+        #             f.write("%d %d\n" % (i, j))
+        #             f.write("%d %d\n" % (j, i))
+        #             edge_number+=1
+    print("full edge_number", edge_number)
+    save_adj(row_ful, col_ful, N=data.num_nodes, dataset_name='mag', savename='mag_full', snap='init')
+
+    
     edge_index, drop_edge_index, _ = dropout_adj(edge_index,train_idx, num_nodes= data.num_nodes_dict["paper"])
     
     edge_index = to_undirected(edge_index, data.num_nodes_dict["paper"])
@@ -1259,11 +1296,19 @@ def mag():
                     f.write("%d %d\n" % (j, i))
                     edge_number+=1
     print("edge_number", edge_number) 
-    exit(0)
+    
     save_adj(row, col, N=data.num_nodes_dict["paper"], dataset_name='mag', savename='mag_init', snap='init')
-    num_snap = 15
+    num_snap = 16
     snapshot = math.floor(row_drop.shape[0] / num_snap)
     print('num_snap: ', num_snap)
+    # #Shuffle the removed edges and show a more flexible setting
+    # # Generate shuffled indices
+    # indices = np.random.permutation(len(row_drop))
+    # # Shuffle both arrays using the same indices
+    # row_drop = row_drop[indices]
+    # col_drop = col_drop[indices]
+
+    print('num_snap: ', row_drop)
 
     for sn in range(num_snap):
         print(sn)
@@ -1332,7 +1377,7 @@ if __name__ == "__main__":
     # patent()
     # arxiv()
     # tmall()
-    # mag()
-    mooc()
+    mag()
+    # mooc()
     # wikipedia()
     # reddit()

@@ -637,7 +637,7 @@ void Instantgnn::ppr_push(int dimension, Eigen::Ref<Eigen::MatrixXd>feat, bool i
     }
     string filename = "./time.log";
     ofstream queryfile(filename, ios::app);
-    queryfile<<"snap: "<<config.snap <<" time cost:"<<timeCost<<endl;
+    queryfile<<timeCost<<" ";
     queryfile.close();
     config.snap+=1;
     vector<vector<bool>>().swap(isCandidates);

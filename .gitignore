@@ -1,1 +1,21 @@
 convert/dataset
+# Workspace specific
+backup/*
+save
+save/*
+save_*
+log
+log/*
+log_*
+data
+dataset/*
+data/*
+data_*
+pretrained
+pretrained/*
+
+# Django stuff:
+*.log
+*.txt
+*.out
+temp
