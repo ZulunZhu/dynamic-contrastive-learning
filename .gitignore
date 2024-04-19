@@ -9,7 +9,7 @@ log/*
 log_*
 data
 dataset/*
-pkl
+pkl/
 pkl/*
 data/*
 data_*
