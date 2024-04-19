@@ -9,6 +9,8 @@ log/*
 log_*
 data
 dataset/*
+pkl
+pkl/*
 data/*
 data_*
 pretrained
