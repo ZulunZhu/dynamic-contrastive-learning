@@ -38,8 +38,8 @@ def show_gpu():
     print("GPU overall::",meminfo.total/1024**3, "GB") #总的显存大小
     print("GPU allocated::",meminfo.used/1024**3, "GB")  #已用显存大小
     print("GPU left::",meminfo.free/1024**3, "GB")  #剩余显存大小
-def var_info(var):
-    return print(f"{nameof(var)}: {var}")
+
+
 
 def update_results_csv(result_path, model_name, dataset_name, new_result):
     # Load the existing CSV file into a DataFrame or create a new one if it doesn't exist
@@ -123,10 +123,11 @@ def main():
     parser.add_argument('--dropout', type=float, default=0, help='dropout rate.')
     parser.add_argument('--bias', default='none', help='bias.')
     parser.add_argument("--proj_layers", type=int, default=1, help="number of project linear layers")
-    parser.add_argument('--epochs', type=int, default= 100, help='number of epochs.')
+    parser.add_argument('--epochs', type=int, default= 10, help='number of epochs.')
     parser.add_argument('--batch', type=int, default=2048, help='batch size.')
-    parser.add_argument("--patience", type=int, default=50, help="early stop patience condition")
+    parser.add_argument("--patience", type=int, default=100, help="early stop patience condition")
     parser.add_argument('--dev', type=int, default=0, help='device id.')
+    parser.add_argument('--skip_sn0', type=int, default=1, help='decide whether to skip snapshot 0.')
     args = parser.parse_args()
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -152,10 +153,12 @@ def main():
     macros = []
     micros = [] 
     pretrain_times = []
-    # macro_init, micro_init, pretrain_time_init = prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels,args, checkpt_file)
-    # macros.append(macro_init)
-    # micros.append(micro_init)
-    # pretrain_times.append(pretrain_time_init)
+    change_node_list = np.zeros([n]) 
+    if not args.skip_sn0:
+        macro_init, micro_init, pretrain_time_init = prepare_to_train(0,features,features_p,features_n, m, train_idx, val_idx, test_idx, train_labels, val_labels, test_labels, labels,args, checkpt_file, change_node_list)
+        macros.append(macro_init)
+        micros.append(micro_init)
+        pretrain_times.append(pretrain_time_init)
     arxiv_table_path = Path('../mag_accuracy_table.csv')
 
     print('------------------ update -------------------')
@@ -166,7 +169,7 @@ def main():
         change_node_list = np.zeros([n]) 
         features_copy = copy.deepcopy(features)
         # print("change_node_list",np.sum(change_node_list))
-        py_alg.snapshot_lazy('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_32snap'+str(i+1)+'.txt', args.rmax, args.rbmax,args.delta, args.alpha, features, features_p, change_node_list, args.alg)
+        py_alg.snapshot_operation('../data/'+args.dataset+'/'+args.dataset+'_Edgeupdate_32snap'+str(i+1)+'.txt', args.rmax, args.alpha, features, args.alg)
         print("number of changed node", np.sum(change_node_list))
         # print("features_ori:",features)
         change_node_list = change_node_list.astype(bool)
@@ -193,6 +196,81 @@ def main():
     print("Mean Macro: ", np.mean( macros), " Mean Micro: ", np.mean( micros), "Mean training time: ", np.mean(pretrain_times))
     # with open('./log/sensitivity.txt', 'a') as f:
     #     print('Dataset:'+args.dataset+f"metric_micro:{100*np.mean( micros):.2f}%  "+f" hidden: {args.hidden:.1f}"+f" epochs: {args.n_ggd_epochs:.1f}",file=f)
+
+def train_incremental(model, device, train_loader, optimizer, mem_loader):
+    model.train()
+
+    time_epoch=0
+    loss_list=[]
+    loss_fun = nn.BCEWithLogitsLoss()
+    for step, (x, y) in enumerate(train_loader):
+        t_st=time.time()
+        task_grads = {}
+        for step_mem, (x_mem, y_mem) in enumerate(mem_loader):
+            x_mem, y_mem = x_mem.cuda(), y_mem.cuda()
+            optimizer.zero_grad()
+            out_mem = model(x_mem)
+            loss_mem = F.nll_loss(out_mem, y_mem.squeeze(1))
+            # print("out", out.sigmoid())
+            # print("y.squeeze(1)", y.to(torch.float))
+            # if(torch.sum(y)>0):
+            #     print("torch.sum(y)>0!!")
+            # loss = loss_fun(out.sigmoid(), y.to(torch.float))
+            loss_mem.backward()
+            gradients = {}
+            for name, parameter in model.named_parameters():
+                gradients[name] = parameter.grad.clone()
+            task_grads[step_mem] = update_grad.grad_to_vector(gradients)
+        ref_grad_vec = torch.stack(list(task_grads.values()))
+        ref_grad_vec = torch.sum(ref_grad_vec, dim=0)/ref_grad_vec.shape[0]
+
+        x, y = x.cuda(), y.cuda()
+        optimizer.zero_grad()
+        out = model(x)
+        loss = F.nll_loss(out, y.squeeze(1))
+        # print("out", out.sigmoid())
+        # print("y.squeeze(1)", y.to(torch.float))
+        # if(torch.sum(y)>0):
+        #     print("torch.sum(y)>0!!")
+        # loss = loss_fun(out.sigmoid(), y.to(torch.float))
+        loss.backward()
+        # for name, parameter in model.named_parameters():
+        #     print(parameter.grad)
+        # Example: save gradients as a torch file
+        gradients = {}
+        for name, parameter in model.named_parameters():
+            gradients[name] = parameter.grad.clone()  # Use `.clone()` to save a copy of the gradient tensor
+        # torch.save(gradients, grad_checkpt_file)
+        # loaded_gradients = torch.load(grad_checkpt_file)
+
+    #    for param in classifier.parameters():
+    #     print(param)
+    #    print("loaded_gradients", loaded_gradients)
+        # for n, p in gradients.items():
+        #     print("loaded_gradients", p)
+        current_grad_vec = update_grad.grad_to_vector(gradients)
+        # print("current_grad_vec", current_grad_vec)
+        # print("ref_grad_vec", ref_grad_vec)
+
+        assert current_grad_vec.shape == ref_grad_vec.shape
+        dotp = current_grad_vec * ref_grad_vec
+        dotp = dotp.sum()
+        if (dotp < 0).sum() != 0:
+            # new_grad = update_grad.get_grad(current_grad_vec, ref_grad_vec)
+            new_grad = update_grad.get_grad(current_grad_vec,ref_grad_vec)
+            # copy gradients back
+            # print("current_grad_vec", current_grad_vec)
+            # print("new_grad", new_grad)
+            update_grad.vector_to_grad(model,new_grad)
+            # for name, parameter in model.named_parameters():
+            #     print(parameter.grad)
+            # exit(0)
+        
+        optimizer.step()
+        time_epoch+=(time.time()-t_st)
+        loss_list.append(loss.item())
+        
+    return np.mean(loss_list), time_epoch
 
 def train(model, device, train_loader, optimizer):
     model.train()
@@ -496,24 +574,37 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     else:
         classifier = ClassMLP(feature_dim,args.hidden,label_dim,args.layer,args.dropout).cuda()
     ### Instant original method
-    sub_train = np.where(~change_node_list)[0]
-    print("train_labels.shape", torch.sum(train_labels))
-    print("train_labels.shape", torch.sum(val_labels))
-    print("train_labels.shape", torch.sum(test_labels))
+    
+
     train_dataset = ExtendDataset(embeds[train_idx],train_labels)
     valid_dataset = ExtendDataset(embeds[val_idx],val_labels)
     test_dataset = ExtendDataset(embeds[test_idx],test_labels)
-    mini_train_dataset = ExtendDataset(embeds[sub_train],train_labels)
+    
+ 
 
-    var_info(train_idx)
-    var_info(sub_train)
     
     # all_loader = DataLoader(all_dataset, batch_size=args.batch,shuffle=False)
     train_loader = DataLoader(train_dataset, batch_size=args.batch,shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=128, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
-    mini_train_loader = DataLoader(mini_train_dataset, batch_size=args.batch,shuffle=True)
-    
+    if snapshot>0:
+        
+        sub_train = np.where(change_node_list)[0]
+        print("sub_train:", sub_train.shape)
+        mini_train_dataset = ExtendDataset(embeds[sub_train],labels[sub_train].unsqueeze(1))
+        mini_train_loader = DataLoader(mini_train_dataset, batch_size=args.batch,shuffle=True)
+
+        memory = np.where(~change_node_list)[0]
+        # Ensure that there are enough samples in memory to match sub_train
+        if len(memory) >= len(sub_train):
+            # Sample indices from memory
+            memory = np.random.choice(memory, size=len(sub_train), replace=False)
+            print("Sampled indices from memory:", memory.shape)
+        else:
+            print("Not enough elements in memory to match the size of sub_train.")
+
+        mem_dataset = ExtendDataset(embeds[memory],labels[memory].unsqueeze(1))
+        mem_loader = DataLoader(mem_dataset, batch_size=args.batch,shuffle=True)
     print(classifier)
     
     evaluator = Evaluator(name='ogbn-papers100M')
@@ -543,7 +634,7 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
         #     print("loaded_gradients", p)
 
         ref_grad_vec = update_grad.grad_to_vector(loaded_gradients)
-        train_loader = mini_train_loader
+        torch.set_printoptions(precision=8)
     
 
     
@@ -553,47 +644,81 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     
     print("--------------------------")
     print("Training...")
-    for epoch in range(args.epochs):
-        loss_tra,train_ep = train(classifier,args.dev,train_loader,classifier_optimizer)
-        t_st=time.time()
-        f1_val = validate(classifier, args.dev, valid_loader, evaluator)
-        train_time+=train_ep
-        if(epoch+1)%1 == 0:
-            print(f'Epoch:{epoch+1:02d},'
-            f'Train_loss:{loss_tra:.3f}',
-            f'Valid_acc:{100*f1_val:.2f}%',
-            f'Time_cost:{train_ep:.3f}/{train_time:.3f}')
-        if f1_val > best:
-            best = f1_val
-            best_epoch = epoch+1
+    if snapshot==0:
+        for epoch in range(args.epochs):
+            loss_tra,train_ep = train(classifier,args.dev,train_loader,classifier_optimizer)
             t_st=time.time()
-            torch.save(classifier.state_dict(), checkpt_file)
+            f1_val = validate(classifier, args.dev, valid_loader, evaluator)
+            train_time+=train_ep
+            if(epoch+1)%1 == 0:
+                print(f'Epoch:{epoch+1:02d},'
+                f'Train_loss:{loss_tra:.3f}',
+                f'Valid_acc:{100*f1_val:.2f}%',
+                f'Time_cost:{train_ep:.3f}/{train_time:.3f}')
+            if f1_val > best:
+                best = f1_val
+                best_epoch = epoch+1
+                t_st=time.time()
+                torch.save(classifier.state_dict(), checkpt_file)
 
-            # Example: save gradients as a torch file
-            gradients = {}
-            for name, parameter in classifier.named_parameters():
-                gradients[name] = parameter.grad.clone()  # Use `.clone()` to save a copy of the gradient tensor
-            torch.save(gradients, grad_checkpt_file)
+                # Example: save gradients as a torch file
+                gradients = {}
+                for name, parameter in classifier.named_parameters():
+                    gradients[name] = parameter.grad.clone()  # Use `.clone()` to save a copy of the gradient tensor
+                    # print("parameter.grad.clone()", parameter.grad.clone())
+                torch.save(gradients, grad_checkpt_file)
 
-            bad_counter = 0
-        else:
-            bad_counter += 1
-        if bad_counter == args.patience:
-            break
+                bad_counter = 0
+            else:
+                bad_counter += 1
+            if bad_counter == args.patience:
+                break
     
     # For incremental model test, to test whether the model of last moment can be used in the next moment (seems no)
     # if snapshot > 0:
     #    checkpt_file = 'pretrained/'+'snapshot'+str(snapshot-1)+'.pt'
     #    print("*****************************"+checkpt_file)
     if snapshot>0:
-        loaded_gradients = torch.load(grad_checkpt_file)
-    #    for param in classifier.parameters():
-    #     print(param)
-    #    print("loaded_gradients", loaded_gradients)
-        for n, p in loaded_gradients.items():
-            print("loaded_gradients", p)
-        current_grad_vec = update_grad.grad_to_vector(loaded_gradients)
-        var_info(current_grad_vec)
+        test_acc, metric_macro, metric_micro, roc = test(classifier, args.dev, test_loader, evaluator,checkpt_file_for_initial)
+        print(f"Train cost: {train_time:.2f}s")
+        print('Load {}th epoch'.format(best_epoch))
+        print("Checkpt_file: ", checkpt_file_for_initial)
+        print(f"Test accuracy:{100*test_acc:.2f}%")
+        print(f"metric_macro:{100*metric_macro:.2f}%")
+        print(f"metric_micro:{100*metric_micro:.2f}%")
+        for epoch in range(args.epochs):
+            loss_tra,train_ep = train_incremental(classifier,args.dev,train_loader,classifier_optimizer,mini_train_loader)
+            # loss_tra,train_ep = train(classifier,args.dev,train_loader,classifier_optimizer)
+            t_st=time.time()
+            f1_val = validate(classifier, args.dev, valid_loader, evaluator)
+            train_time+=train_ep
+            if(epoch+1)%1 == 0:
+                print(f'Epoch:{epoch+1:02d},'
+                f'Train_loss:{loss_tra:.3f}',
+                f'Valid_acc:{100*f1_val:.2f}%',
+                f'Time_cost:{train_ep:.3f}/{train_time:.3f}')
+            if f1_val > best:
+                best = f1_val
+                best_epoch = epoch+1
+                t_st=time.time()
+                torch.save(classifier.state_dict(), checkpt_file)
+
+                # Example: save gradients as a torch file
+                gradients = {}
+                for name, parameter in classifier.named_parameters():
+                    gradients[name] = parameter.grad.clone()  # Use `.clone()` to save a copy of the gradient tensor
+                    # print("parameter.grad.clone()", parameter.grad.clone())
+                torch.save(gradients, grad_checkpt_file)
+
+                bad_counter = 0
+            else:
+                bad_counter += 1
+            if bad_counter == args.patience:
+                break
+
+          
+
+        
 
     memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     test_acc, metric_macro, metric_micro, roc = test(classifier, args.dev, test_loader, evaluator,checkpt_file)
@@ -607,7 +732,7 @@ def prepare_to_train(snapshot, features_ori, features_p, features_n,m, train_idx
     with open('accuracy_and_memory.txt', 'a') as f:
         print('Dataset:'+args.dataset+" Use gcl?"+str(use_cl), file=f)
         print(f"snapshot:{snapshot:.2f}  "+f"metric_macro:{100*metric_macro:.2f}%  "+f"metric_micro:{100*metric_micro:.2f}%  "+f"Memory: {memory / 2**20:.3f}GB",file=f)
-        
+    exit(0)     
     return metric_macro, metric_micro, pretrain_time
     # dur = []
     # best_acc, best_val_acc = 0, 0

@@ -1118,8 +1118,8 @@ typedef unsigned char __pyx_t_7eigency_4core_uchar;
  * from libcpp.string cimport string
  * 
  * ctypedef unsigned int uint             # <<<<<<<<<<<<<<
- * 
  * #cdef extern from "instantAlg.cpp":
+ * #cdef extern from "incremental_update.cpp":
  */
 typedef unsigned int __pyx_t_11propagation_uint;
 /* Declarations.proto */

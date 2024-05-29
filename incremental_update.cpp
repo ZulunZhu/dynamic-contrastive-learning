@@ -22,7 +22,6 @@ vector<vector<uint>> Instantgnn::update_graph(string updatefilename, vector<uint
     while (infile >> v_from >> v_to)
     {
         insertFLAG = g.isEdgeExist(v_from, v_to);
-        
         // update graph
         if(!isAffected[v_from]){
             affected_nodelst.push_back(v_from);
@@ -367,7 +366,7 @@ void Instantgnn::snapshot_operation(string updatefilename, double rmaxx,double a
     
     //update graph, obtain affected node_list
     vector<uint> affected_nodelst;
-
+    vector<pair<uint,uint>> affected_node_pair;
     vector<vector<uint>> delete_neighbors(vert);
     vector<vector<uint>> add_neighbors(vert);
 
@@ -410,23 +409,37 @@ void Instantgnn::snapshot_operation(string updatefilename, double rmaxx,double a
             double rowsum_n=rowsum_neg[dim];
             double rmax_p=rowsum_p*rmax;
             double rmax_n=rowsum_n*rmax;
-            
-            double increment = feat(affected_node,dim) + alpha*R[dim][affected_node] - alpha*X(affected_node,dim);
-            increment *= oldDu[i] - Du[affected_node];
-            increment /= Du[affected_node];
-            
+            double increment = feat(affected_node,dim)*alpha/Du[affected_node];
             for(uint j=0; j<add_neighbors[affected_node].size(); j++)
             {
                 uint add_node = add_neighbors[affected_node][j];
-                increment += (1-alpha)*feat(add_node,dim) / Du[affected_node] / Du[add_node];
+                R[dim][add_node] += increment;
             }
             for(uint j=0; j<delete_neighbors[affected_node].size(); j++)
             {
                 uint delete_node = delete_neighbors[affected_node][j];
-                increment -= (1-alpha)*feat(delete_node,dim) / Du[affected_node] / Du[delete_node];
+                R[dim][delete_node] -= increment;
             }
-            increment /= alpha;
-            R[dim][affected_node] += increment;
+
+
+
+            
+            // double increment = feat(affected_node,dim) + alpha*R[dim][affected_node] - alpha*X(affected_node,dim);
+            // increment *= oldDu[i] - Du[affected_node];
+            // increment /= Du[affected_node];
+            
+            // for(uint j=0; j<add_neighbors[affected_node].size(); j++)
+            // {
+            //     uint add_node = add_neighbors[affected_node][j];
+            //     increment += (1-alpha)*feat(add_node,dim) / Du[affected_node] / Du[add_node];
+            // }
+            // for(uint j=0; j<delete_neighbors[affected_node].size(); j++)
+            // {
+            //     uint delete_node = delete_neighbors[affected_node][j];
+            //     increment -= (1-alpha)*feat(delete_node,dim) / Du[affected_node] / Du[delete_node];
+            // }
+            // increment /= alpha;
+            // R[dim][affected_node] += increment;
             
             if( R[dim][affected_node]>rmax_p || R[dim][affected_node]<rmax_n )
             {

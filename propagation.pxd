@@ -2,8 +2,8 @@ from eigency.core cimport *
 from libcpp.string cimport string
 
 ctypedef unsigned int uint
-
 #cdef extern from "instantAlg.cpp":
+#cdef extern from "incremental_update.cpp":
 cdef extern from "instantAlg_arxiv.cpp":
 	pass
 
