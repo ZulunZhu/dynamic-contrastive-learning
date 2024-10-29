@@ -1,8 +1,8 @@
 ## Code for KDD 24 paper [Topology-monitorable Contrastive Learning on Dynamic Graphs](https://dl.acm.org/doi/10.1145/3637528.3671777).
 
-## ![Framework](figures/overview.pdf) 
+## ![Framework](figures/overview.png) 
 
-## This code is implemented based on  [InstantGNN](https://github.com/zheng-yp/InstantGNN.git) and [GGD](https://github.com/zyzisastudyreallyhardguy/Graph-Group-Discrimination.git).
+### This code is implemented based on  [InstantGNN](https://github.com/zheng-yp/InstantGNN.git) and [GGD](https://github.com/zyzisastudyreallyhardguy/Graph-Group-Discrimination.git).
 
 ## Requirements
 
